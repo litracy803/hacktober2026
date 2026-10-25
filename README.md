@@ -45,11 +45,12 @@ If the selected provider is not configured, crawling still works and stores dete
 ```bash
 tritontrail crawl --limit 50 --enrich
 tritontrail enrich --limit 50
+tritontrail socials --limit 100
 tritontrail search "computer science career"
 tritontrail stats
 ```
 
-The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/stats`, and `POST /api/crawl`. The included UI provides search, source links, feature confidence, social-link verification state, and evidence snippets.
+The `socials` command revisits each organization’s UCSD profile, follows up to three explicitly linked official websites, and extracts public Instagram, Facebook, TikTok, YouTube, LinkedIn, Discord, and Linktree URLs. It never logs into or crawls those social platforms. The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/stats`, and `POST /api/crawl`. The included UI provides search, source links, feature confidence, social-link verification state, and evidence snippets.
 
 The crawler uses a descriptive user agent, caching through content hashes, a low request rate, retries at the HTTP client layer, and a bounded crawl limit. It does not log into or scrape social platforms. It stores only social URLs explicitly linked from the UCSD directory or a club website; future externally discovered accounts should be represented as unverified candidates.
 
