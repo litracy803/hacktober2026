@@ -1,47 +1,43 @@
-# Organa — UC San Diego events
+# TritonTrail
 
-A Hacktoberfest prototype for turning public UCSD student organization announcements into searchable, filterable campus events.
+TritonTrail turns the public UC San Diego student-organization directory into a searchable, evidence-backed organization index. It crawls the official directory, extracts source facts and outbound links, optionally enriches each organization with Gemma, and stores the result in a queryable SQLite database.
 
-## Run it
+## Quick start
 
-Open `index.html` in a browser. The current demo uses six illustrative sample events so the filtering UI can be reviewed without API credentials.
-
-## Proposed ingestion pipeline
-
-1. Import the public organization directory at [studentorg.ucsd.edu](https://studentorg.ucsd.edu/), then extract each org's listed social handles. Keep the source URL and last-checked timestamp for every record.
-2. Submit discovered public Instagram profile/post URLs to Bright Data's Instagram Posts Discover API from a server-side job. Keep Bright Data credentials in environment secrets; never ship them to browser JavaScript.
-3. Normalize post caption, image URL, permalink, timestamp, and organization identity. Send the caption plus image to Gemma 4 for structured event extraction: title, date/time, location, description, tags, confidence, and evidence snippets.
-4. Validate dates, deduplicate by source post URL, and queue low-confidence or incomplete results for human review. Persist confirmed events for the frontend to query.
-5. Filter by event type, free items/food, location, majors/interests, and explicit audience eligibility. Show the original post link and an AI-generated label so students can verify details.
-
-## Important product choices
-
-- Demographic filters must be based on eligibility or audience language explicitly published by the organization (for example, “open to first-generation students”), never inferred from people shown in images or from names.
-- “Free” and other practical details should carry an evidence snippet and confidence; do not silently turn an uncertain model guess into a promise.
-- Respect Instagram/Bright Data terms, UCSD site terms, rate limits, attribution, and image retention requirements. For the hackathon demo, prefer a small pilot set of orgs and cache results.
-- Gemma 4 supports image and text inputs, making a multimodal extraction step feasible. Keep extraction constrained to a JSON schema and make the source post available for correction.
-
-## Suggested event schema
-
-```json
-{
-  "id": "stable-id",
-  "organization": "Student organization name",
-  "title": "Event title",
-  "starts_at": "2026-10-27T16:00:00-07:00",
-  "ends_at": null,
-  "location": "Price Center",
-  "description": "Short summary",
-  "tags": ["Pre-professional", "Free", "Business"],
-  "eligibility": [],
-  "evidence": {"date": "caption phrase", "free": "free pizza"},
-  "confidence": 0.91,
-  "source_url": "https://www.instagram.com/p/...",
-  "source_posted_at": "2026-10-20T19:10:00Z",
-  "review_status": "needs_review"
-}
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+cp .env.example .env
+tritontrail crawl --limit 25 --enrich
+uvicorn tritontrail.api:app --reload
 ```
 
-## Next implementation slice
+Open <http://127.0.0.1:8000>. The default database is `data/tritontrail.db`.
 
-Add a server-side importer and database only after confirming the Bright Data dataset/API access mode, event volume, and whether org accounts are collected from linked directory records or provided by orgs. The client-only demo deliberately does not make external requests.
+## Gemma
+
+Gemma is called through an OpenAI-compatible chat-completions endpoint. This works with a local Ollama server or another compatible gateway:
+
+```dotenv
+GEMMA_BASE_URL=http://127.0.0.1:11434/v1
+GEMMA_API_KEY=ollama
+GEMMA_MODEL=gemma3:4b
+```
+
+If the endpoint is not configured, crawling still works and stores deterministic data plus a keyword-based fallback marked `pending_enrichment`.
+
+## Commands
+
+```bash
+tritontrail crawl --limit 50 --enrich
+tritontrail enrich --limit 50
+tritontrail search "computer science career"
+tritontrail stats
+```
+
+The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/stats`, and `POST /api/crawl`. The included UI provides search, source links, feature confidence, social-link verification state, and evidence snippets.
+
+The crawler uses a descriptive user agent, caching through content hashes, a low request rate, retries at the HTTP client layer, and a bounded crawl limit. It does not log into or scrape social platforms. It stores only social URLs explicitly linked from the UCSD directory or a club website; future externally discovered accounts should be represented as unverified candidates.
+
+Each record preserves the distinction between deterministic source facts, Gemma classifications, supporting evidence, and unknown fields. SQLite FTS5 powers local search; the repository layer is deliberately small so it can move to PostgreSQL later.
