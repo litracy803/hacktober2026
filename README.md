@@ -17,15 +17,28 @@ Open <http://127.0.0.1:8000>. The default database is `data/tritontrail.db`.
 
 ## Gemma
 
-Gemma is called through an OpenAI-compatible chat-completions endpoint. This works with a local Ollama server or another compatible gateway:
+Google AI Studio is the default provider. Install the SDK and put your AI Studio key in `.env`:
+
+```bash
+pip install google-genai
+```
 
 ```dotenv
+GEMMA_PROVIDER=google
+GEMINI_API_KEY=your_google_ai_studio_key
+GEMMA_MODEL=gemma-4-26b-a4b-it
+```
+
+The project also supports an OpenAI-compatible local endpoint such as Ollama:
+
+```dotenv
+GEMMA_PROVIDER=ollama
 GEMMA_BASE_URL=http://127.0.0.1:11434/v1
 GEMMA_API_KEY=ollama
 GEMMA_MODEL=gemma3:4b
 ```
 
-If the endpoint is not configured, crawling still works and stores deterministic data plus a keyword-based fallback marked `pending_enrichment`.
+If the selected provider is not configured, crawling still works and stores deterministic data plus a keyword-based fallback marked `pending_enrichment`.
 
 ## Commands
 

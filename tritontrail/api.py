@@ -26,7 +26,8 @@ def home() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "database": str(settings.db_path), "gemma_configured": bool(settings.gemma_base_url)}
+    configured = bool(settings.gemini_api_key) if settings.gemma_provider == "google" else bool(settings.gemma_base_url)
+    return {"ok": True, "database": str(settings.db_path), "gemma_provider": settings.gemma_provider, "gemma_configured": configured}
 
 
 @app.get("/api/stats")

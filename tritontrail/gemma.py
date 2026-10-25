@@ -32,6 +32,8 @@ class GemmaClient:
 
     @property
     def configured(self) -> bool:
+        if self.settings.gemma_provider == "google":
+            return bool(self.settings.gemini_api_key)
         return bool(self.settings.gemma_base_url)
 
     def enrich(self, official_name: str, description: str, source_text: str, source_url: str) -> tuple[dict[str, Any], str, str | None]:
@@ -46,6 +48,8 @@ Directory description: {description}
 Source URL: {source_url}
 Source text:\n{source_text[:12000]}"""
         raw = ""
+        if self.settings.gemma_provider == "google":
+            return self._enrich_google(prompt, official_name, description)
         if not self.configured:
             return fallback_payload(official_name, description), raw, "Gemma endpoint is not configured"
         try:
@@ -59,3 +63,26 @@ Source text:\n{source_text[:12000]}"""
             return payload, raw, None
         except Exception as exc:  # keep crawl usable when the model is unavailable
             return fallback_payload(official_name, description), raw, str(exc)
+
+    def _enrich_google(self, prompt: str, official_name: str, description: str) -> tuple[dict[str, Any], str, str | None]:
+        if not self.settings.gemini_api_key:
+            return fallback_payload(official_name, description), "", "GEMINI_API_KEY is not configured"
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=self.settings.gemini_api_key)
+            response = client.models.generate_content(
+                model=self.settings.gemma_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=0),
+            )
+            raw = response.text or ""
+            text = raw.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            payload = json.loads(text)
+            payload["features"] = [x for x in payload.get("features", []) if isinstance(x, dict) and x.get("tag") in TAGS]
+            return payload, raw, None
+        except Exception as exc:
+            return fallback_payload(official_name, description), "", str(exc)
