@@ -1,27 +1,64 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="theme-color" content="#f4f3ef"/><title>TritonRadar — UC San Diego events</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="src/styles.css"/></head>
-<body><div class="app-shell"><button class="sidebar-tab" id="sidebar-tab" aria-label="Close filters sidebar" title="Close sidebar">‹</button><aside class="sidebar">
-<div class="brand-row"><a class="brand" href="#"><span class="brand-mark">T</span><span>TritonRadar<span class="brand-period">.</span></span></a></div>
-<div class="campus-label"><span class="campus-icon">✳</span><span><small>CAMPUS</small><strong>UC San Diego</strong></span></div>
-<div class="nav-label">DISCOVER</div><a class="nav-item active" href="#"><span>▦</span> All events <span class="nav-count">24</span></a>
-<div class="sidebar-divider"></div><div class="filter-heading"><span>FILTERS</span><button id="clear-filters">Clear all</button></div>
-<section class="filter-group" data-filter-group="event-type"><h3>Event type</h3>
-<label><input type="checkbox" value="Pre-professional" class="tag-filter"><span class="check"></span> Pre-professional</label><label><input type="checkbox" value="Social" class="tag-filter"><span class="check"></span> Social & community</label><label><input type="checkbox" value="Workshop" class="tag-filter"><span class="check"></span> Workshop / learning</label><label><input type="checkbox" value="Networking" class="tag-filter"><span class="check"></span> Networking</label><label><input type="checkbox" value="Performance" class="tag-filter"><span class="check"></span> Performance / show</label><label><input type="checkbox" value="Fundraiser" class="tag-filter"><span class="check"></span> Fundraiser / service</label><label><input type="checkbox" value="Competition" class="tag-filter"><span class="check"></span> Competition</label><label><input type="checkbox" value="Info session" class="tag-filter"><span class="check"></span> Info session</label></section>
-<section class="filter-group" data-filter-group="what-matters"><h3>What matters to you</h3><label><input type="checkbox" value="Free" class="tag-filter"><span class="check"></span> Free to attend / free items</label><label><input type="checkbox" value="Food" class="tag-filter"><span class="check"></span> Food & drinks</label><label><input type="checkbox" value="Music" class="tag-filter"><span class="check"></span> Music</label><label><input type="checkbox" value="Arts" class="tag-filter"><span class="check"></span> Arts & culture</label><label><input type="checkbox" value="Creative" class="tag-filter"><span class="check"></span> Crafting & creativity</label><label><input type="checkbox" value="Outdoors" class="tag-filter"><span class="check"></span> Outdoors & movement</label><label><input type="checkbox" value="Wellness" class="tag-filter"><span class="check"></span> Wellness</label><label><input type="checkbox" value="Networking" class="tag-filter"><span class="check"></span> Meet new people</label></section>
-<section class="filter-group" data-filter-group="major-interest"><h3>Major & interests</h3><div class="chip-list"><button class="interest-chip">Tech</button><button class="interest-chip">Health</button><button class="interest-chip">Arts</button><button class="interest-chip">Business</button><button class="interest-chip">Environment</button><button class="interest-chip">Culture</button><button class="interest-chip">Policy</button></div></section>
-<section class="filter-group" data-filter-group="location"><h3>Location</h3><label><input type="checkbox" value="Price Center" class="tag-filter"><span class="check"></span> Price Center</label><label><input type="checkbox" value="Geisel" class="tag-filter"><span class="check"></span> Geisel Library</label><label><input type="checkbox" value="Warren" class="tag-filter"><span class="check"></span> Warren</label><label><input type="checkbox" value="Scripps Pier" class="tag-filter"><span class="check"></span> Scripps / La Jolla</label></section>
-</aside>
-<main class="main-content"><header class="topbar"><div class="breadcrumbs">Discover <span>/</span> <strong>Week</strong></div></header>
-<section class="welcome"><div><div class="eyebrow"><span class="live-dot"></span> YOUR CAMPUS, HAPPENING</div><h1>Find your <em>people.</em></h1><p>Good things are happening on campus. Find the ones that feel like you.</p></div><div class="welcome-art" aria-hidden="true"><div class="sun"></div><span class="spark s1">✳</span><span class="spark s2">✦</span><span class="orbit"></span><span class="art-label">UCSD<br>THIS WEEK</span></div></section>
-<div class="search-row"><div class="search-box"><span>⌕</span><input id="search" placeholder="Try “free food”, “design”, or “career fair”…"/><kbd>⌘ K</kbd></div><button class="week-control" id="prev-week" aria-label="Previous week">‹</button><button class="date-button" id="week-label">▦ <span>This week</span></button><button class="week-control" id="next-week" aria-label="Next week">›</button><button class="today-button" id="today">Today</button></div>
-<div class="section-head"><div><h2>Happening this week <span>✳</span></h2><p id="event-count">Curated from UCSD student organizations</p></div><div class="week-range" id="week-range"></div></div><div class="active-filters" id="active-filters"></div>
-<section class="week-calendar" id="week-calendar" aria-live="polite"></section><div class="empty-state" id="empty-state" hidden><span>☁</span><h3>No events match those filters</h3><p>Try removing a filter or searching something else.</p><button id="empty-clear">Clear filters</button></div>
-<footer>Demo events shown for layout preview. Instagram media, post links, and event details come from organization posts once ingestion is connected. <a href="https://studentorg.ucsd.edu/" target="_blank" rel="noreferrer">Browse all UCSD orgs ↗</a></footer></main></div><script src="src/app.js"></script></body></html>
-
-
-
-
-
-
-
-
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f3ef" />
+  <title>TritonRadar — UC San Diego events</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+<div class="app-shell">
+  <button class="sidebar-tab" id="sidebar-tab" aria-label="Close filters sidebar" title="Close sidebar">‹</button>
+  <aside class="sidebar">
+    <div class="brand-row"><a class="brand" href="#"><span class="brand-mark">T</span><span>TritonRadar<span class="brand-period">.</span></span></a></div>
+    <div class="campus-label"><span class="campus-icon">✳</span><span><small>CAMPUS</small><strong>UC San Diego</strong></span></div>
+    <div class="nav-label">DISCOVER</div>
+    <a class="nav-item active" href="#"><span>▦</span> All events <span class="nav-count">24</span></a>
+    <div class="sidebar-divider"></div>
+    <div class="filter-heading"><span>FILTERS</span><button id="clear-filters">Clear all</button></div>
+    <section class="filter-group" data-filter-group="event-type"><h3>Event type</h3>
+      <label><input type="checkbox" value="Pre-professional" class="tag-filter"><span class="check"></span> Pre-professional</label>
+      <label><input type="checkbox" value="Social" class="tag-filter"><span class="check"></span> Social & community</label>
+      <label><input type="checkbox" value="Workshop" class="tag-filter"><span class="check"></span> Workshop / learning</label>
+      <label><input type="checkbox" value="Networking" class="tag-filter"><span class="check"></span> Networking</label>
+      <label><input type="checkbox" value="Performance" class="tag-filter"><span class="check"></span> Performance / show</label>
+      <label><input type="checkbox" value="Fundraiser" class="tag-filter"><span class="check"></span> Fundraiser / service</label>
+      <label><input type="checkbox" value="Competition" class="tag-filter"><span class="check"></span> Competition</label>
+      <label><input type="checkbox" value="Info session" class="tag-filter"><span class="check"></span> Info session</label>
+    </section>
+    <section class="filter-group" data-filter-group="what-matters"><h3>What matters to you</h3>
+      <label><input type="checkbox" value="Free" class="tag-filter"><span class="check"></span> Free to attend / free items</label>
+      <label><input type="checkbox" value="Food" class="tag-filter"><span class="check"></span> Food & drinks</label>
+      <label><input type="checkbox" value="Music" class="tag-filter"><span class="check"></span> Music</label>
+      <label><input type="checkbox" value="Arts" class="tag-filter"><span class="check"></span> Arts & culture</label>
+      <label><input type="checkbox" value="Creative" class="tag-filter"><span class="check"></span> Crafting & creativity</label>
+      <label><input type="checkbox" value="Outdoors" class="tag-filter"><span class="check"></span> Outdoors & movement</label>
+      <label><input type="checkbox" value="Wellness" class="tag-filter"><span class="check"></span> Wellness</label>
+      <label><input type="checkbox" value="Networking" class="tag-filter"><span class="check"></span> Meet new people</label>
+    </section>
+    <section class="filter-group" data-filter-group="major-interest"><h3>Major & interests</h3><div class="chip-list"><button class="interest-chip">Tech</button><button class="interest-chip">Health</button><button class="interest-chip">Arts</button><button class="interest-chip">Business</button><button class="interest-chip">Environment</button><button class="interest-chip">Culture</button><button class="interest-chip">Policy</button></div></section>
+    <section class="filter-group busy-filter"><h3>Busy times</h3><p class="busy-hint">Hide events overlapping your recurring classes or commitments.</p>
+      <div class="busy-form"><label for="busy-day">Day</label><select id="busy-day"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select>
+        <div class="busy-time-row"><label>From <input id="busy-start" type="time" value="17:00"></label><label>To <input id="busy-end" type="time" value="20:00"></label></div><button id="add-busy-time" type="button">Add time</button>
+      </div><p id="busy-message" class="busy-message" aria-live="polite"></p><div id="busy-list" class="busy-list"></div>
+    </section>
+    <section class="filter-group" data-filter-group="location"><h3>Location</h3>
+      <label><input type="checkbox" value="Price Center" class="tag-filter"><span class="check"></span> Price Center</label><label><input type="checkbox" value="Geisel" class="tag-filter"><span class="check"></span> Geisel Library</label><label><input type="checkbox" value="Warren" class="tag-filter"><span class="check"></span> Warren</label><label><input type="checkbox" value="Scripps Pier" class="tag-filter"><span class="check"></span> Scripps / La Jolla</label>
+    </section>
+  </aside>
+  <main class="main-content">
+    <header class="topbar"><div class="breadcrumbs">Discover <span>/</span> <strong>3-day view</strong></div></header>
+    <section class="welcome"><div><div class="eyebrow"><span class="live-dot"></span> YOUR CAMPUS, HAPPENING</div><h1>Find your <em>people.</em></h1><p>Good things are happening on campus. Find the ones that feel like you.</p></div><div class="welcome-art" aria-hidden="true"><div class="sun"></div><span class="spark s1">✳</span><span class="spark s2">✦</span><span class="orbit"></span><span class="art-label">UCSD<br>THIS WEEK</span></div></section>
+    <div class="search-row"><div class="search-box"><span>⌕</span><input id="search" placeholder="Try free food, design, or career fair…" /><kbd>⌘ K</kbd></div><button class="week-control" id="prev-range" aria-label="Previous three days">‹</button><button class="date-button" id="week-label">▦ <span>3 days</span></button><button class="week-control" id="next-range" aria-label="Next three days">›</button><button class="today-button" id="today">Today</button></div>
+    <div class="section-head"><div><h2>Coming up <span>✳</span></h2><p id="event-count">Curated from UCSD student organizations</p></div><div class="week-range" id="week-range"></div></div><div class="active-filters" id="active-filters"></div>
+    <section class="week-calendar" id="week-calendar" aria-live="polite"></section><div class="empty-state" id="empty-state" hidden><span>☁</span><h3>No events match those filters</h3><p>Try removing a filter or changing your busy times.</p><button id="empty-clear">Clear filters</button></div>
+    <footer>Demo events shown for layout preview. Instagram media, post links, and event details come from organization posts once ingestion is connected. <a href="https://studentorg.ucsd.edu/" target="_blank" rel="noreferrer">Browse all UCSD orgs ↗</a></footer>
+  </main>
+</div>
+<script src="src/app.js"></script>
+</body>
+</html>
