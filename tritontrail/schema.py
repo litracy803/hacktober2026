@@ -26,6 +26,14 @@ CREATE TABLE IF NOT EXISTS evidence (
   id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   field_name TEXT NOT NULL, quote TEXT NOT NULL, source_url TEXT, confidence TEXT NOT NULL DEFAULT 'unknown'
 );
+CREATE TABLE IF NOT EXISTS social_posts (
+  id TEXT PRIMARY KEY, organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL DEFAULT 'instagram', post_url TEXT NOT NULL, image_url TEXT,
+  caption TEXT NOT NULL DEFAULT '', posted_at TEXT, location TEXT,
+  event_data TEXT NOT NULL DEFAULT '{}', extraction_status TEXT NOT NULL DEFAULT 'pending',
+  extraction_error TEXT, fetched_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  UNIQUE(organization_id, post_url)
+);
 CREATE TABLE IF NOT EXISTS enrichment_runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   model TEXT NOT NULL, prompt_version TEXT NOT NULL, input_hash TEXT NOT NULL, raw_response TEXT NOT NULL DEFAULT '',

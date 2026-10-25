@@ -20,6 +20,11 @@ class Settings:
     gemma_api_key: str = os.getenv("GEMMA_API_KEY", "").strip()
     gemma_model: str = os.getenv("GEMMA_MODEL", "gemma3:4b")
     gemma_timeout_seconds: float = float(os.getenv("GEMMA_TIMEOUT_SECONDS", "90"))
+    brightdata_api_key: str = os.getenv("BRIGHTDATA_API_KEY", "").strip()
+    brightdata_dataset_id: str = os.getenv("BRIGHTDATA_INSTAGRAM_DATASET_ID", "gd_lk5ns7kz21pck8jpis").strip()
+    brightdata_timeout_seconds: float = float(os.getenv("BRIGHTDATA_TIMEOUT_SECONDS", "120"))
+    instagram_posts_per_account: int = int(os.getenv("INSTAGRAM_POSTS_PER_ACCOUNT", "10"))
+    image_max_bytes: int = int(os.getenv("IMAGE_MAX_BYTES", "8000000"))
 
 
 settings = Settings()

@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import settings
 from .crawler import Crawler
 from .db import Database
+from .instagram import InstagramIngestor
 
 settings.db_path.parent.mkdir(parents=True, exist_ok=True)
 db = Database(settings.db_path)
@@ -26,7 +27,7 @@ def home() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "database": str(settings.db_path), "gemma_configured": bool(settings.gemma_base_url)}
+    return {"ok": True, "database": str(settings.db_path), "gemma_configured": bool(settings.gemma_base_url), "brightdata_configured": bool(settings.brightdata_api_key)}
 
 
 @app.get("/api/stats")
@@ -37,6 +38,11 @@ def stats() -> dict:
 @app.get("/api/organizations")
 def organizations(q: str = "", tag: str | None = None, limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0)) -> dict:
     return {"items": db.search(q, tag, limit, offset), "limit": limit, "offset": offset}
+
+
+@app.get("/api/events")
+def events(tag: str | None = None, limit: int = Query(100, ge=1, le=500)) -> dict:
+    return {"items": db.events(tag, limit), "limit": limit, "tag": tag}
 
 
 @app.get("/api/organizations/{organization_id}")
@@ -55,3 +61,19 @@ def run_crawl(limit: int | None, enrich: bool) -> None:
 def crawl(background_tasks: BackgroundTasks, limit: int | None = Query(None, ge=1, le=1000), enrich: bool = True) -> dict:
     background_tasks.add_task(run_crawl, limit, enrich)
     return {"accepted": True, "message": "Crawl queued", "limit": limit, "enrich": enrich}
+
+
+def run_instagram_sync(account_limit: int | None, posts_per_account: int | None) -> None:
+    InstagramIngestor(settings, db).sync(account_limit, posts_per_account)
+
+
+@app.post("/api/instagram/sync", status_code=202)
+def instagram_sync(background_tasks: BackgroundTasks,
+                   account_limit: int | None = Query(None, ge=1, le=1000),
+                   posts_per_account: int | None = Query(None, ge=1, le=100)) -> dict:
+    if not settings.brightdata_api_key:
+        raise HTTPException(status_code=503, detail="BRIGHTDATA_API_KEY is not configured")
+    if not settings.gemma_base_url:
+        raise HTTPException(status_code=503, detail="GEMMA_BASE_URL is not configured")
+    background_tasks.add_task(run_instagram_sync, account_limit, posts_per_account)
+    return {"accepted": True, "message": "Instagram fetch and event extraction queued", "account_limit": account_limit, "posts_per_account": posts_per_account}

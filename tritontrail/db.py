@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import json
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -136,6 +137,67 @@ class Database:
         with self.connection() as conn:
             return [dict(r) for r in conn.execute("SELECT * FROM organizations WHERE enrichment_status='pending_enrichment' ORDER BY updated_at LIMIT ?", (limit,))]
 
+    def instagram_accounts(self, limit: int | None = None) -> list[dict[str, Any]]:
+        with self.connection() as conn:
+            sql = """SELECT sa.organization_id, o.official_name, sa.handle, sa.url
+                     FROM social_accounts sa JOIN organizations o ON o.id=sa.organization_id
+                     WHERE sa.platform='instagram' AND sa.handle IS NOT NULL AND sa.handle!=''
+                     ORDER BY o.official_name"""
+            params: tuple[Any, ...] = ()
+            if limit is not None:
+                sql += " LIMIT ?"
+                params = (limit,)
+            return [dict(r) for r in conn.execute(sql, params)]
+
+    def save_social_post(self, organization_id: str, post: dict[str, Any]) -> None:
+        with self.connection() as conn:
+            conn.execute(
+                """INSERT INTO social_posts
+                (id, organization_id, post_url, image_url, caption, posted_at, location,
+                 event_data, extraction_status, extraction_error, fetched_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(organization_id, post_url) DO UPDATE SET
+                event_data=CASE WHEN social_posts.caption!=excluded.caption OR COALESCE(social_posts.image_url,'')!=COALESCE(excluded.image_url,'') THEN excluded.event_data ELSE social_posts.event_data END,
+                extraction_status=CASE WHEN social_posts.caption!=excluded.caption OR COALESCE(social_posts.image_url,'')!=COALESCE(excluded.image_url,'') THEN excluded.extraction_status ELSE social_posts.extraction_status END,
+                extraction_error=CASE WHEN social_posts.caption!=excluded.caption OR COALESCE(social_posts.image_url,'')!=COALESCE(excluded.image_url,'') THEN excluded.extraction_error ELSE social_posts.extraction_error END,
+                image_url=excluded.image_url, caption=excluded.caption, posted_at=excluded.posted_at,
+                location=excluded.location,
+                updated_at=excluded.updated_at""",
+                (post["id"], organization_id, post["post_url"], post.get("image_url"),
+                 post.get("caption", ""), post.get("posted_at"), post.get("location"),
+                 json.dumps(post.get("event_data", {})), post.get("extraction_status", "pending"),
+                 post.get("extraction_error"), now(), now()),
+            )
+
+    def events(self, tag: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        with self.connection() as conn:
+            rows = conn.execute(
+                """SELECT p.*, o.official_name FROM social_posts p
+                   JOIN organizations o ON o.id=p.organization_id
+                   WHERE p.extraction_status='processed' ORDER BY p.posted_at DESC LIMIT ?""",
+                (limit,),
+            ).fetchall()
+            result = []
+            for row in rows:
+                item = dict(row)
+                try:
+                    item["event"] = json.loads(item.pop("event_data"))
+                except (TypeError, json.JSONDecodeError):
+                    item["event"] = {}
+                if not item["event"].get("is_event"):
+                    continue
+                if tag and tag.lower() not in [str(x).lower() for x in item["event"].get("tags", [])]:
+                    continue
+                result.append(item)
+            return result
+
+    def pending_posts(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self.connection() as conn:
+            return [dict(r) for r in conn.execute(
+                "SELECT p.*, o.official_name FROM social_posts p JOIN organizations o ON o.id=p.organization_id WHERE p.extraction_status IN ('pending','failed') ORDER BY p.fetched_at LIMIT ?",
+                (limit,),
+            )]
+
     def stats(self) -> dict[str, int]:
         with self.connection() as conn:
-            return {"organizations": conn.execute("SELECT COUNT(*) FROM organizations").fetchone()[0], "enriched": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='enriched'").fetchone()[0], "social_accounts": conn.execute("SELECT COUNT(*) FROM social_accounts").fetchone()[0], "review_needed": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='review_needed'").fetchone()[0]}
+            return {"organizations": conn.execute("SELECT COUNT(*) FROM organizations").fetchone()[0], "enriched": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='enriched'").fetchone()[0], "social_accounts": conn.execute("SELECT COUNT(*) FROM social_accounts").fetchone()[0], "review_needed": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='review_needed'").fetchone()[0], "instagram_posts": conn.execute("SELECT COUNT(*) FROM social_posts").fetchone()[0], "events": conn.execute("SELECT COUNT(*) FROM social_posts WHERE extraction_status='processed' AND json_extract(event_data, '$.is_event')=1").fetchone()[0]}
