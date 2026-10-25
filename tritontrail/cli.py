@@ -17,6 +17,8 @@ def main() -> None:
     crawl.add_argument("--enrich", action="store_true")
     enrich = sub.add_parser("enrich", help="Enrich pending organizations with Gemma")
     enrich.add_argument("--limit", type=int, default=50)
+    socials = sub.add_parser("socials", help="Discover social links from official club websites")
+    socials.add_argument("--limit", type=int, default=100)
     search = sub.add_parser("search", help="Search indexed organizations")
     search.add_argument("query", nargs="?", default="")
     search.add_argument("--tag")
@@ -36,6 +38,8 @@ def main() -> None:
         result = Crawler(settings, db).crawl(args.limit, args.enrich)
     elif args.command == "enrich":
         result = Crawler(settings, db).enrich_pending(args.limit)
+    elif args.command == "socials":
+        result = Crawler(settings, db).discover_socials(args.limit)
     elif args.command == "search":
         result = db.search(args.query, args.tag)
     elif args.command == "instagram":

@@ -26,15 +26,29 @@ Open <http://127.0.0.1:8000>. The default database is `data/tritonradar.db`.
 
 ## Instagram and Gemma setup
 
-Gemma uses an OpenAI-compatible chat-completions endpoint. Configure a vision-capable Gemma 4 model (or compatible vision-capable Gemma 3 model) through Ollama or another compatible gateway. A text-only model cannot inspect event flyers.
+Google AI Studio is the default provider. Install the SDK and put your AI Studio key in `.env`:
+
+```bash
+pip install google-genai
+```
 
 ```dotenv
+GEMMA_PROVIDER=google
+GEMINI_API_KEY=your_google_ai_studio_key
+GEMMA_MODEL=gemma-4-26b-a4b-it
+```
+
+The project also supports an OpenAI-compatible local endpoint such as Ollama:
+
+```dotenv
+GEMMA_PROVIDER=ollama
 GEMMA_BASE_URL=http://127.0.0.1:11434/v1
 GEMMA_API_KEY=ollama
 GEMMA_MODEL=gemma4:e4b
 BRIGHTDATA_API_KEY=your-brightdata-key
 ```
 
+If the selected provider is not configured, crawling still works and stores deterministic data plus a keyword-based fallback marked `pending_enrichment`.
 The ingestion flow reads Instagram handles already stored in the database, asks Bright Data's Instagram Posts Discover by URL dataset for recent posts, then sends each post's caption and image to Gemma. Bright Data and Gemma credentials stay server-side in environment variables; never put them in browser JavaScript. Image retention and API use should follow the relevant provider terms.
 
 If a profile fetch fails, TritonRadar records it in `instagram_account_issues` and continues to the next profile. Explicit “profile not found” errors are skipped in future syncs; ambiguous or temporary failures remain retryable. Review issues with `tritonradar instagram-issues`. To retry a skipped profile, call `POST /api/instagram/issues/{id}/retry`; it will be attempted during the next sync.
@@ -44,6 +58,7 @@ If a profile fetch fails, TritonRadar records it in `instagram_account_issues` a
 ```bash
 tritonradar crawl --limit 50 --enrich
 tritonradar enrich --limit 50
+tritontrail socials --limit 100
 tritonradar instagram --accounts 10 --posts-per-account 10
 tritonradar instagram --fetch-only
 tritonradar process-instagram --limit 50
@@ -51,6 +66,7 @@ tritonradar instagram-issues
 tritonradar search "computer science career"
 tritonradar stats
 ```
+The `socials` command revisits each organization’s UCSD profile, follows up to three explicitly linked official websites, and extracts public Instagram, Facebook, TikTok, YouTube, LinkedIn, Discord, and Linktree URLs. It never logs into or crawls those social platforms. The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/stats`, and `POST /api/crawl`. The included UI provides search, source links, feature confidence, social-link verification state, and evidence snippets.
 
 The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/instagram/issues`, `POST /api/instagram/issues/{id}/retry`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The service UI includes organization search and Instagram-derived events with tag filters and source-post links.
 

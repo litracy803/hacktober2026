@@ -64,6 +64,10 @@ class Database:
                     (organization_id, link["platform"], link.get("handle"), link["url"], link.get("verification", "official_link"), link.get("evidence", ""), link.get("source_url")),
                 )
 
+    def clear_social_links(self, organization_id: str, verification: str) -> None:
+        with self.connection() as conn:
+            conn.execute("DELETE FROM social_accounts WHERE organization_id=? AND verification=?", (organization_id, verification))
+
     def save_enrichment(self, organization_id: str, payload: dict[str, Any], raw_response: str, model: str, input_hash: str, status: str, error: str | None = None) -> None:
         with self.connection() as conn:
             conn.execute("DELETE FROM aliases WHERE organization_id=?", (organization_id,))
@@ -137,6 +141,9 @@ class Database:
         with self.connection() as conn:
             return [dict(r) for r in conn.execute("SELECT * FROM organizations WHERE enrichment_status='pending_enrichment' ORDER BY updated_at LIMIT ?", (limit,))]
 
+    def organizations(self, limit: int = 100) -> list[dict[str, Any]]:
+        with self.connection() as conn:
+            return [dict(r) for r in conn.execute("SELECT * FROM organizations ORDER BY official_name LIMIT ?", (limit,))]
     def instagram_accounts(self, limit: int | None = None) -> list[dict[str, Any]]:
         with self.connection() as conn:
             sql = """SELECT sa.organization_id, o.official_name, sa.handle, sa.url
