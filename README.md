@@ -1,4 +1,4 @@
-# TritonRadar — UC San Diego events
+# TritonRadar - UC San Diego events
 
 TritonRadar turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. The project includes a browser calendar prototype and a Python ingestion service that can collect organization posts through Bright Data and extract events with a vision-capable Gemma model.
 
