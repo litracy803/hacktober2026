@@ -19,6 +19,9 @@ pip install -e .
 cp .env.example .env
 tritonradar crawl --limit 25 --enrich
 tritonradar instagram --accounts 10
+tritonradar crawl --pilot
+tritonradar enrich --pilot
+tritonradar socials --pilot
 uvicorn tritontrail.api:app --reload
 ```
 
@@ -52,6 +55,8 @@ If the selected provider is not configured, crawling still works and stores dete
 The ingestion flow reads Instagram handles already stored in the database, asks Bright Data's Instagram Posts Discover by URL dataset for recent posts, then sends each post's caption and image to Gemma. Bright Data and Gemma credentials stay server-side in environment variables; never put them in browser JavaScript. Image retention and API use should follow the relevant provider terms.
 
 If a profile fetch fails, TritonRadar records it in `instagram_account_issues` and continues to the next profile. Explicit “profile not found” errors are skipped in future syncs; ambiguous or temporary failures remain retryable. Review issues with `tritonradar instagram-issues`. To retry a skipped profile, call `POST /api/instagram/issues/{id}/retry`; it will be attempted during the next sync.
+
+The `--pilot` flag selects a stable 10-club cohort covering data science, computing, CASA/cultural, social, performance, service, identity/cultural, health-professional, sport, and product-management organizations. It is intended for repeatable end-to-end testing instead of relying on directory order.
 
 ## Commands
 

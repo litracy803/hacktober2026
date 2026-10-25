@@ -137,13 +137,15 @@ class Database:
         row["social_count"] = conn.execute("SELECT COUNT(*) FROM social_accounts WHERE organization_id=?", (row["id"],)).fetchone()[0]
         return row
 
-    def pending_enrichment(self, limit: int = 50) -> list[dict[str, Any]]:
+    def pending_enrichment(self, limit: int = 50, name_filter: Any = None) -> list[dict[str, Any]]:
         with self.connection() as conn:
-            return [dict(r) for r in conn.execute("SELECT * FROM organizations WHERE enrichment_status='pending_enrichment' ORDER BY updated_at LIMIT ?", (limit,))]
+            rows = [dict(r) for r in conn.execute("SELECT * FROM organizations WHERE enrichment_status='pending_enrichment' ORDER BY updated_at")]
+            return [r for r in rows if name_filter is None or name_filter(r["official_name"])][:limit]
 
-    def organizations(self, limit: int = 100) -> list[dict[str, Any]]:
+    def organizations(self, limit: int = 100, name_filter: Any = None) -> list[dict[str, Any]]:
         with self.connection() as conn:
-            return [dict(r) for r in conn.execute("SELECT * FROM organizations ORDER BY official_name LIMIT ?", (limit,))]
+            rows = [dict(r) for r in conn.execute("SELECT * FROM organizations ORDER BY official_name")]
+            return [r for r in rows if name_filter is None or name_filter(r["official_name"])][:limit]
     def instagram_accounts(self, limit: int | None = None) -> list[dict[str, Any]]:
         with self.connection() as conn:
             sql = """SELECT sa.organization_id, o.official_name, sa.handle, sa.url
