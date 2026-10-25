@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TritonTrail · Organizations</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar"><div class="brand"><span class="mark">✦</span><span>TritonTrail</span></div><span class="eyebrow">UCSD organization radar</span></header>
+  <main class="shell">
+    <section class="hero"><p class="eyebrow">EVIDENCE-BACKED DISCOVERY</p><h1>Find your people on campus.</h1><p class="lede">Search UCSD organizations by what they do, who they welcome, and what you care about. Every profile keeps its source and makes uncertainty visible.</p>
+      <div class="search"><input id="search" placeholder="Try “computer science career” or “cultural”"><button id="searchButton">Search</button></div>
+    </section>
+    <section class="stats" id="stats"></section>
+    <section class="results events-section"><div class="section-head"><div><p class="eyebrow">FROM INSTAGRAM POSTS</p><h2>Campus events</h2></div><label class="event-filter">Filter by tag <select id="eventTag"><option value="">All tags</option></select></label></div><div id="eventMessage" class="message"></div><div id="events" class="cards"></div></section>
+    <section class="results"><div class="section-head"><div><p class="eyebrow">DIRECTORY</p><h2>Organizations</h2></div><button class="quiet" id="crawlButton">Refresh source</button></div><div id="message" class="message"></div><div id="cards" class="cards"></div></section>
+  </main>
+  <dialog id="detail"><button class="close" onclick="detail.close()">×</button><div id="detailBody"></div></dialog>
+  <script src="/static/app.js"></script>
+</body>
+</html>

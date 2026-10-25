@@ -1,58 +1,79 @@
-# TritonRadar — UC San Diego events
+# TritonRadar - UC San Diego events
 
-A Hacktoberfest prototype for turning public UCSD student organization announcements into searchable, filterable campus events.
+TritonRadar turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. The project includes a browser calendar prototype and a Python ingestion service that can collect organization posts through Bright Data and extract events with a vision-capable Gemma model.
 
-## Run it
+## Run the frontend prototype
 
-Open `index.html` in a browser. The current demo uses six illustrative sample events so the filtering UI can be reviewed without API credentials.
+Open `index.html` in a browser. The current demo uses illustrative sample events so the calendar and filters can be reviewed without API credentials.
 
-## Proposed ingestion pipeline
+The default view is a Monday–Sunday calendar grid. Use the arrows to move between weeks and **Today** to jump to the current week. Event cards show start and end times and include an **Add to calendar** `.ics` download. The calendar filters event format, practical/social interests, majors/interests, and location. Multiple selected filters use broad matching; search text narrows those results. The filter sidebar can be collapsed and reopened with the Filters button.
 
-1. Import the public organization directory at [studentorg.ucsd.edu](https://studentorg.ucsd.edu/), then extract each org's listed social handles. Keep the source URL and last-checked timestamp for every record.
-2. Submit discovered public Instagram profile/post URLs to Bright Data's Instagram Posts Discover API from a server-side job. Keep Bright Data credentials in environment secrets; never ship them to browser JavaScript.
-3. Normalize post caption, image URL, permalink, timestamp, and organization identity. Send the caption plus image to Gemma 4 for structured event extraction: title, date/time, location, description, tags, confidence, and evidence snippets.
-4. Validate dates, deduplicate by source post URL, and queue low-confidence or incomplete results for human review. Persist confirmed events for the frontend to query.
-5. Filter by event type, free items/food, location, majors/interests, and explicit audience eligibility. Show the original post link and an AI-generated label so students can verify details.
+Each ingested event should populate `imageUrl` from the Instagram post image and `sourceUrl` with that post's permalink. Sample events leave those fields empty, so the UI shows a preview placeholder and “Post link pending” rather than implying mock media or links are real.
 
-## Important product choices
+## Run the ingestion service
 
-- Demographic filters must be based on eligibility or audience language explicitly published by the organization (for example, “open to first-generation students”), never inferred from people shown in images or from names.
-- “Free” and other practical details should carry an evidence snippet and confidence; do not silently turn an uncertain model guess into a promise.
-- Respect Instagram/Bright Data terms, UCSD site terms, rate limits, attribution, and image retention requirements. For the hackathon demo, prefer a small pilot set of orgs and cache results.
-- Gemma 4 supports image and text inputs, making a multimodal extraction step feasible. Keep extraction constrained to a JSON schema and make the source post available for correction.
-
-## Suggested event schema
-
-```json
-{
-  "id": "stable-id",
-  "organization": "Student organization name",
-  "title": "Event title",
-  "starts_at": "2026-10-27T16:00:00-07:00",
-  "ends_at": null,
-  "location": "Price Center",
-  "description": "Short summary",
-  "tags": ["Pre-professional", "Free", "Business"],
-  "eligibility": [],
-  "evidence": {"date": "caption phrase", "free": "free pizza"},
-  "confidence": 0.91,
-  "source_url": "https://www.instagram.com/p/...",
-  "source_posted_at": "2026-10-20T19:10:00Z",
-  "review_status": "needs_review"
-}
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+cp .env.example .env
+tritonradar crawl --limit 25 --enrich
+tritonradar instagram --accounts 10
+uvicorn tritontrail.api:app --reload
 ```
 
-## Next implementation slice
+Open <http://127.0.0.1:8000>. The default database is `data/tritonradar.db`.
 
-Add a server-side importer and database only after confirming the Bright Data dataset/API access mode, event volume, and whether org accounts are collected from linked directory records or provided by orgs. The client-only demo deliberately does not make external requests.
+## Instagram and Gemma setup
 
-## Week calendar prototype updates
+Google AI Studio is the default provider. Install the SDK and put your AI Studio key in `.env`:
+
+```bash
+pip install google-genai
+```
+
+```dotenv
+GEMMA_PROVIDER=google
+GEMINI_API_KEY=your_google_ai_studio_key
+GEMMA_MODEL=gemma-4-26b-a4b-it
+```
+
+The project also supports an OpenAI-compatible local endpoint such as Ollama:
+
+```dotenv
+GEMMA_PROVIDER=ollama
+GEMMA_BASE_URL=http://127.0.0.1:11434/v1
+GEMMA_API_KEY=ollama
+GEMMA_MODEL=gemma4:e4b
+BRIGHTDATA_API_KEY=your-brightdata-key
+```
+
+If the selected provider is not configured, crawling still works and stores deterministic data plus a keyword-based fallback marked `pending_enrichment`.
+The ingestion flow reads Instagram handles already stored in the database, asks Bright Data's Instagram Posts Discover by URL dataset for recent posts, then sends each post's caption and image to Gemma. Bright Data and Gemma credentials stay server-side in environment variables; never put them in browser JavaScript. Image retention and API use should follow the relevant provider terms.
+
+If a profile fetch fails, TritonRadar records it in `instagram_account_issues` and continues to the next profile. Explicit “profile not found” errors are skipped in future syncs; ambiguous or temporary failures remain retryable. Review issues with `tritonradar instagram-issues`. To retry a skipped profile, call `POST /api/instagram/issues/{id}/retry`; it will be attempted during the next sync.
+
+## Commands
+
+```bash
+tritonradar crawl --limit 50 --enrich
+tritonradar enrich --limit 50
+tritontrail socials --limit 100
+tritonradar instagram --accounts 10 --posts-per-account 10
+tritonradar instagram --fetch-only
+tritonradar process-instagram --limit 50
+tritonradar instagram-issues
+tritonradar search "computer science career"
+tritonradar stats
+```
+The `socials` command revisits each organization’s UCSD profile, follows up to three explicitly linked official websites, and extracts public Instagram, Facebook, TikTok, YouTube, LinkedIn, Discord, and Linktree URLs. It never logs into or crawls those social platforms. The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/stats`, and `POST /api/crawl`. The included UI provides search, source links, feature confidence, social-link verification state, and evidence snippets.
 
 The default view shows three consecutive days. Use the arrows to move by three days and **Today** to jump to the current date. Event cards show start and end times and include an **Add to calendar** `.ics` download; the event description in the file contains the event tags, organization, location, and Instagram permalink when available. Filter groups now include event formats, practical/social interests, major and interests, and location in that order.
+The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/instagram/issues`, `POST /api/instagram/issues/{id}/retry`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The service UI includes organization search and Instagram-derived events with tag filters and source-post links.
 
-Each ingested event should populate `imageUrl` from the Instagram post image returned by the scraper and `sourceUrl` with that exact post's permalink. The sample events leave those fields empty, so the UI shows an explicit preview placeholder and “Post link pending” instead of suggesting a mock image or URL is real. Once the pipeline supplies those fields, the card image and source link render from the post automatically.
+## Event extraction and review
 
-Filtering now uses broad matching: when multiple filters are selected, an event appears if it matches any selected tag or location. Search text still narrows those results. The sidebar can be collapsed and reopened with the Filters button; saved events are not shown in this version.
+Gemma extracts event title, dates, location, description, tags, confidence, and evidence from the caption and image. Missing or uncertain details remain unknown. Audience or demographic details are used only when the organization explicitly states them; they are never inferred from people shown in an image or from names. Review extracted details against the original post before treating them as confirmed calendar information.
 
 
 ## Add-to-calendar options
