@@ -48,9 +48,18 @@ Add a server-side importer and database only after confirming the Bright Data da
 
 ## Week calendar prototype updates
 
-The default view is a Monday–Sunday calendar grid. Use the arrows to move between weeks and **Today** to jump to the current week. Event cards show start and end times and include an **Add to calendar** `.ics` download; the event description in the file contains the event tags, organization, location, and Instagram permalink when available. Filter groups now include event formats, practical/social interests, major and interests, and location in that order.
+The default view shows three consecutive days. Use the arrows to move by three days and **Today** to jump to the current date. Event cards show start and end times and include an **Add to calendar** `.ics` download; the event description in the file contains the event tags, organization, location, and Instagram permalink when available. Filter groups now include event formats, practical/social interests, major and interests, and location in that order.
 
 Each ingested event should populate `imageUrl` from the Instagram post image returned by the scraper and `sourceUrl` with that exact post's permalink. The sample events leave those fields empty, so the UI shows an explicit preview placeholder and “Post link pending” instead of suggesting a mock image or URL is real. Once the pipeline supplies those fields, the card image and source link render from the post automatically.
 
 Filtering now uses broad matching: when multiple filters are selected, an event appears if it matches any selected tag or location. Search text still narrows those results. The sidebar can be collapsed and reopened with the Filters button; saved events are not shown in this version.
+
+
+## Add-to-calendar options
+
+Event cards have an app-owned calendar menu with Google Calendar, Outlook, and downloadable `.ics` options. Tags, organization, location, and the Instagram permalink (when available) are included in the event details. The calendar menu works without a third-party script.
+
+## Three-day calendar and busy times
+
+The calendar now displays three consecutive days at once, with previous/next controls moving by three days. In the sidebar, **Busy times** lets students add recurring weekday intervals (such as Tuesday 5:00–8:00 PM); events that overlap any saved interval are filtered out. Busy intervals are saved in the browser's local storage on that device. The calendar cards use a full-width Add to calendar menu.
 
