@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS social_posts (
   extraction_error TEXT, fetched_at TEXT NOT NULL, updated_at TEXT NOT NULL,
   UNIQUE(organization_id, post_url)
 );
+CREATE TABLE IF NOT EXISTS instagram_account_issues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  account_url TEXT NOT NULL, handle TEXT NOT NULL DEFAULT '',
+  issue_type TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'retryable',
+  attempts INTEGER NOT NULL DEFAULT 1, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
+  recovered_at TEXT, UNIQUE(organization_id, account_url)
+);
 CREATE TABLE IF NOT EXISTS enrichment_runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   model TEXT NOT NULL, prompt_version TEXT NOT NULL, input_hash TEXT NOT NULL, raw_response TEXT NOT NULL DEFAULT '',

@@ -12,6 +12,15 @@ from .db import Database
 from .gemma import GemmaClient
 
 BRIGHTDATA_URL = "https://api.brightdata.com/datasets/v3/scrape"
+PROFILE_MISSING_MARKERS = (
+    "profile not found", "account not found", "user not found", "does not exist",
+    "doesn't exist", "no such user", "instagram account does not exist",
+)
+
+
+def _issue_type(error: Exception) -> str:
+    message = str(error).lower()
+    return "profile_missing" if any(marker in message for marker in PROFILE_MISSING_MARKERS) else "fetch_error"
 
 
 def _post_id(post: dict[str, Any]) -> str:
@@ -69,7 +78,8 @@ class InstagramIngestor:
             json={"input": [{"url": profile_url, "num_of_posts": posts_per_account or self.settings.instagram_posts_per_account,
                              "start_date": "", "end_date": "", "post_type": ""}], "limit_per_input": None},
         )
-        response.raise_for_status()
+        if response.is_error:
+            raise RuntimeError(f"Bright Data HTTP {response.status_code}: {response.text[:1200]}")
         posts = _posts_from_response(response.json())
         normalized = []
         for post in posts:
@@ -85,17 +95,22 @@ class InstagramIngestor:
 
     def fetch_posts(self, account_limit: int | None = None, posts_per_account: int | None = None) -> dict[str, int]:
         accounts = self.db.instagram_accounts(account_limit)
-        counts = {"accounts": len(accounts), "posts_received": 0, "posts_saved": 0, "failed": 0}
+        counts = {"accounts": len(accounts), "posts_received": 0, "posts_saved": 0, "failed": 0, "profiles_missing": 0}
         for account in accounts:
             try:
                 posts = self.fetch_account_posts(account, posts_per_account)
+                self.db.resolve_instagram_issue(account["organization_id"], account["url"])
                 counts["posts_received"] += len(posts)
                 for post in posts:
                     post.update({"event_data": {}, "extraction_status": "pending"})
                     self.db.save_social_post(account["organization_id"], post)
                     counts["posts_saved"] += 1
-            except Exception:
+            except Exception as exc:
                 counts["failed"] += 1
+                issue_type = _issue_type(exc)
+                self.db.record_instagram_issue(account["organization_id"], account["url"],
+                                               str(account.get("handle") or ""), issue_type, str(exc))
+                counts["profiles_missing"] += int(issue_type == "profile_missing")
             time.sleep(self.settings.crawl_delay_seconds)
         return counts
 

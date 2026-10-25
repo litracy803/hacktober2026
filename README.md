@@ -37,12 +37,13 @@ tritonradar enrich --limit 50
 tritonradar instagram --accounts 10 --posts-per-account 10
 tritonradar instagram --fetch-only
 tritonradar process-instagram --limit 50
+tritonradar instagram-issues
 tritonradar search "computer science career"
 tritonradar stats
 ```
 
-The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The included UI provides organization search and an Instagram-derived event view with tag filters and source-post links.
+The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/instagram/issues`, `POST /api/instagram/issues/{id}/retry`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The included UI provides organization search and an Instagram-derived event view with tag filters and source-post links.
 
-Directory crawling uses a descriptive user agent, caching through content hashes, a low request rate, and bounded limits. Instagram post collection is delegated to Bright Data and uses only handles already present in the database. Post records retain the source URL and extraction status. The event extractor returns unknown/null values when dates, cost, location, or audience are unsupported; demographic traits are never inferred. Review extracted events before relying on them as a complete calendar.
+Directory crawling uses a descriptive user agent, caching through content hashes, a low request rate, and bounded limits. Instagram post collection is delegated to Bright Data and uses only handles already present in the database. Failed profiles are recorded in `instagram_account_issues`; explicit “profile not found” errors are skipped in later syncs, while transient/API errors remain retryable. Review the issue list with `tritonradar instagram-issues`; mark a missing profile for another attempt with `POST /api/instagram/issues/{id}/retry`. Post records retain the source URL and extraction status. The event extractor returns unknown/null values when dates, cost, location, or audience are unsupported; demographic traits are never inferred. Review extracted events before relying on them as a complete calendar.
 
 Each record preserves the distinction between deterministic source facts, Gemma classifications, supporting evidence, and unknown fields. SQLite FTS5 powers local search; the repository layer is deliberately small so it can move to PostgreSQL later.

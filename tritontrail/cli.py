@@ -27,6 +27,9 @@ def main() -> None:
     instagram.add_argument("--fetch-only", action="store_true")
     process = sub.add_parser("process-instagram", help="Process saved Instagram posts with Gemma")
     process.add_argument("--limit", type=int, default=50)
+    issues = sub.add_parser("instagram-issues", help="List Instagram profiles that need attention")
+    issues.add_argument("--all", action="store_true", help="Include issues that later recovered")
+    issues.add_argument("--limit", type=int, default=200)
     args = parser.parse_args()
     db = Database(settings.db_path)
     if args.command == "crawl":
@@ -40,6 +43,8 @@ def main() -> None:
         result = ingestor.fetch_posts(args.accounts, args.posts_per_account) if args.fetch_only else ingestor.sync(args.accounts, args.posts_per_account)
     elif args.command == "process-instagram":
         result = InstagramIngestor(settings, db).process_pending(args.limit)
+    elif args.command == "instagram-issues":
+        result = db.instagram_issues(args.all, args.limit)
     else:
         result = db.stats()
     print(json.dumps(result, indent=2, default=str))

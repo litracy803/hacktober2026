@@ -45,6 +45,18 @@ def events(tag: str | None = None, limit: int = Query(100, ge=1, le=500)) -> dic
     return {"items": db.events(tag, limit), "limit": limit, "tag": tag}
 
 
+@app.get("/api/instagram/issues")
+def instagram_issues(include_recovered: bool = False, limit: int = Query(200, ge=1, le=1000)) -> dict:
+    return {"items": db.instagram_issues(include_recovered, limit), "limit": limit}
+
+
+@app.post("/api/instagram/issues/{issue_id}/retry")
+def retry_instagram_issue(issue_id: int) -> dict:
+    if not db.retry_instagram_issue(issue_id):
+        raise HTTPException(status_code=404, detail="Instagram account issue not found")
+    return {"accepted": True, "message": "Account will be attempted on the next Instagram sync", "issue_id": issue_id}
+
+
 @app.get("/api/organizations/{organization_id}")
 def organization(organization_id: str) -> dict:
     result = db.get(organization_id)

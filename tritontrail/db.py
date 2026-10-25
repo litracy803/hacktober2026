@@ -142,12 +142,55 @@ class Database:
             sql = """SELECT sa.organization_id, o.official_name, sa.handle, sa.url
                      FROM social_accounts sa JOIN organizations o ON o.id=sa.organization_id
                      WHERE sa.platform='instagram' AND sa.handle IS NOT NULL AND sa.handle!=''
+                     AND NOT EXISTS (SELECT 1 FROM instagram_account_issues i
+                                     WHERE i.organization_id=sa.organization_id AND i.account_url=sa.url
+                                     AND i.status='profile_missing')
                      ORDER BY o.official_name"""
             params: tuple[Any, ...] = ()
             if limit is not None:
                 sql += " LIMIT ?"
                 params = (limit,)
             return [dict(r) for r in conn.execute(sql, params)]
+
+    def record_instagram_issue(self, organization_id: str, account_url: str, handle: str, issue_type: str, detail: str) -> None:
+        stamp = now()
+        with self.connection() as conn:
+            conn.execute(
+                """INSERT INTO instagram_account_issues
+                (organization_id,account_url,handle,issue_type,detail,status,attempts,first_seen,last_seen,recovered_at)
+                VALUES (?,?,?,?,?,?,1,?,?,NULL)
+                ON CONFLICT(organization_id,account_url) DO UPDATE SET
+                handle=excluded.handle, issue_type=excluded.issue_type, detail=excluded.detail,
+                status=excluded.status, attempts=instagram_account_issues.attempts+1,
+                last_seen=excluded.last_seen, recovered_at=NULL""",
+                (organization_id, account_url, handle, issue_type, detail[:2000],
+                 "profile_missing" if issue_type == "profile_missing" else "retryable", stamp, stamp),
+            )
+
+    def resolve_instagram_issue(self, organization_id: str, account_url: str) -> None:
+        with self.connection() as conn:
+            conn.execute(
+                "UPDATE instagram_account_issues SET status='recovered', recovered_at=? WHERE organization_id=? AND account_url=?",
+                (now(), organization_id, account_url),
+            )
+
+    def instagram_issues(self, include_recovered: bool = False, limit: int = 200) -> list[dict[str, Any]]:
+        with self.connection() as conn:
+            where = "" if include_recovered else "WHERE i.status!='recovered'"
+            return [dict(r) for r in conn.execute(
+                f"""SELECT i.*, o.official_name FROM instagram_account_issues i
+                    JOIN organizations o ON o.id=i.organization_id {where}
+                    ORDER BY CASE i.status WHEN 'profile_missing' THEN 0 ELSE 1 END, i.last_seen DESC LIMIT ?""",
+                (limit,),
+            )]
+
+    def retry_instagram_issue(self, issue_id: int) -> bool:
+        with self.connection() as conn:
+            cursor = conn.execute(
+                "UPDATE instagram_account_issues SET status='retryable', issue_type='manual_retry', recovered_at=NULL WHERE id=?",
+                (issue_id,),
+            )
+            return cursor.rowcount > 0
 
     def save_social_post(self, organization_id: str, post: dict[str, Any]) -> None:
         with self.connection() as conn:
@@ -200,4 +243,4 @@ class Database:
 
     def stats(self) -> dict[str, int]:
         with self.connection() as conn:
-            return {"organizations": conn.execute("SELECT COUNT(*) FROM organizations").fetchone()[0], "enriched": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='enriched'").fetchone()[0], "social_accounts": conn.execute("SELECT COUNT(*) FROM social_accounts").fetchone()[0], "review_needed": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='review_needed'").fetchone()[0], "instagram_posts": conn.execute("SELECT COUNT(*) FROM social_posts").fetchone()[0], "events": conn.execute("SELECT COUNT(*) FROM social_posts WHERE extraction_status='processed' AND json_extract(event_data, '$.is_event')=1").fetchone()[0]}
+            return {"organizations": conn.execute("SELECT COUNT(*) FROM organizations").fetchone()[0], "enriched": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='enriched'").fetchone()[0], "social_accounts": conn.execute("SELECT COUNT(*) FROM social_accounts").fetchone()[0], "review_needed": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='review_needed'").fetchone()[0], "instagram_posts": conn.execute("SELECT COUNT(*) FROM social_posts").fetchone()[0], "events": conn.execute("SELECT COUNT(*) FROM social_posts WHERE extraction_status='processed' AND json_extract(event_data, '$.is_event')=1").fetchone()[0], "instagram_account_issues": conn.execute("SELECT COUNT(*) FROM instagram_account_issues WHERE status!='recovered'").fetchone()[0]}
