@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f3ef" />
+  <title>Organa — UC San Diego events</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span class="brand-mark">o</span><span>organa<span class="brand-period">.</span></span></a>
+      <div class="campus-switch"><span class="campus-icon">✳</span><span><small>CAMPUS</small><strong>UC San Diego</strong></span><span class="chevron">⌄</span></div>
+      <div class="nav-label">DISCOVER</div>
+      <a class="nav-item active" href="#"><span>▦</span> All events <span class="nav-count">24</span></a>
+      <a class="nav-item" href="#"><span>♡</span> Saved <span class="nav-count">3</span></a>
+      <a class="nav-item" href="#"><span>▣</span> Calendar</a>
+      <div class="sidebar-divider"></div>
+      <div class="filter-heading"><span>FILTERS</span><button id="clear-filters">Clear all</button></div>
+      <section class="filter-group"><h3>Event type</h3>
+        <label><input type="checkbox" value="Pre-professional" class="tag-filter"><span class="check"></span> Pre-professional</label>
+        <label><input type="checkbox" value="Social" class="tag-filter"><span class="check"></span> Social & community</label>
+        <label><input type="checkbox" value="Workshop" class="tag-filter"><span class="check"></span> Workshop</label>
+      </section>
+      <section class="filter-group"><h3>What matters to you</h3>
+        <label><input type="checkbox" value="Free" class="tag-filter"><span class="check"></span> Free stuff <span class="filter-emoji">✳</span></label>
+        <label><input type="checkbox" value="Food" class="tag-filter"><span class="check"></span> Food & drinks</label>
+        <label><input type="checkbox" value="Networking" class="tag-filter"><span class="check"></span> Meet people</label>
+      </section>
+      <section class="filter-group"><h3>Location</h3>
+        <label><input type="checkbox" value="Price Center" class="tag-filter"><span class="check"></span> Price Center</label>
+        <label><input type="checkbox" value="Geisel" class="tag-filter"><span class="check"></span> Geisel Library</label>
+        <label><input type="checkbox" value="Warren" class="tag-filter"><span class="check"></span> Warren</label>
+      </section>
+      <section class="filter-group"><h3>Major & interests</h3>
+        <div class="chip-list"><button class="interest-chip">Tech</button><button class="interest-chip">Health</button><button class="interest-chip">Arts</button><button class="interest-chip">Business</button></div>
+      </section>
+      <div class="sidebar-note"><span>✦</span><p>Made for Tritons, by Tritons.</p><small>Events from student orgs you might love.</small></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><div class="breadcrumbs">Discover <span>/</span> <strong>All events</strong></div><div class="top-actions"><button class="icon-button" aria-label="Notifications">♧</button><div class="avatar">T</div></div></header>
+      <section class="welcome"><div><div class="eyebrow"><span class="live-dot"></span> YOUR CAMPUS, HAPPENING</div><h1>Find your <em>people.</em></h1><p>Good things are happening on campus. Find the ones that feel like you.</p></div><div class="welcome-art" aria-hidden="true"><div class="sun"></div><span class="spark s1">✳</span><span class="spark s2">✦</span><span class="orbit"></span><span class="art-label">UCSD<br>THIS WEEK</span></div></section>
+      <div class="search-row"><div class="search-box"><span>⌕</span><input id="search" placeholder="Try “free food”, “design”, or “career fair”…" /><kbd>⌘ K</kbd></div><button class="date-button">▦ <span>This week</span> <b>⌄</b></button><button class="view-toggle" title="Grid view">▦</button></div>
+      <div class="section-head"><div><h2>Happening this week <span>✳</span></h2><p id="event-count">Curated from UCSD student organizations</p></div><button class="sort-button">Recommended <b>⌄</b></button></div>
+      <div class="active-filters" id="active-filters"></div>
+      <section class="event-grid" id="event-grid" aria-live="polite"></section>
+      <div class="empty-state" id="empty-state" hidden><span>☁</span><h3>No events match those filters</h3><p>Try removing a filter or searching something else.</p><button id="empty-clear">Clear filters</button></div>
+      <footer>Events are sourced from public student organization announcements. <a href="https://studentorg.ucsd.edu/" target="_blank" rel="noreferrer">Browse all UCSD orgs ↗</a></footer>
+    </main>
+  </div>
+  <script src="src/app.js"></script>
+</body>
+</html>
