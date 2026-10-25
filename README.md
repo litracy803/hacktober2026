@@ -1,4 +1,4 @@
-# Organa — UC San Diego events
+# TritonRadar — UC San Diego events
 
 A Hacktoberfest prototype for turning public UCSD student organization announcements into searchable, filterable campus events.
 
@@ -45,3 +45,12 @@ Open `index.html` in a browser. The current demo uses six illustrative sample ev
 ## Next implementation slice
 
 Add a server-side importer and database only after confirming the Bright Data dataset/API access mode, event volume, and whether org accounts are collected from linked directory records or provided by orgs. The client-only demo deliberately does not make external requests.
+
+## Week calendar prototype updates
+
+The default view is a Monday–Sunday calendar grid. Use the arrows to move between weeks and **Today** to jump to the current week. Event cards show start and end times and include an **Add to calendar** `.ics` download; the event description in the file contains the event tags, organization, location, and Instagram permalink when available. Filter groups now include event formats, practical/social interests, major and interests, and location in that order.
+
+Each ingested event should populate `imageUrl` from the Instagram post image returned by the scraper and `sourceUrl` with that exact post's permalink. The sample events leave those fields empty, so the UI shows an explicit preview placeholder and “Post link pending” instead of suggesting a mock image or URL is real. Once the pipeline supplies those fields, the card image and source link render from the post automatically.
+
+Filtering now uses broad matching: when multiple filters are selected, an event appears if it matches any selected tag or location. Search text still narrows those results. The sidebar can be collapsed and reopened with the Filters button; saved events are not shown in this version.
+
