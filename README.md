@@ -1,8 +1,16 @@
-# TritonRadar
+# TritonRadar — UC San Diego events
 
-TritonRadar turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. It stores organizations and their official social links, fetches bounded post batches through Bright Data, passes post captions and images to a multimodal Gemma model, and makes extracted events available for tag filtering.
+TritonRadar turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. The project includes a browser calendar prototype and a Python ingestion service that can collect organization posts through Bright Data and extract events with a vision-capable Gemma model.
 
-## Quick start
+## Run the frontend prototype
+
+Open `index.html` in a browser. The current demo uses illustrative sample events so the calendar and filters can be reviewed without API credentials.
+
+The default view is a Monday–Sunday calendar grid. Use the arrows to move between weeks and **Today** to jump to the current week. Event cards show start and end times and include an **Add to calendar** `.ics` download. The calendar filters event format, practical/social interests, majors/interests, and location. Multiple selected filters use broad matching; search text narrows those results. The filter sidebar can be collapsed and reopened with the Filters button.
+
+Each ingested event should populate `imageUrl` from the Instagram post image and `sourceUrl` with that post's permalink. Sample events leave those fields empty, so the UI shows a preview placeholder and “Post link pending” rather than implying mock media or links are real.
+
+## Run the ingestion service
 
 ```bash
 python -m venv .venv
@@ -16,9 +24,9 @@ uvicorn tritontrail.api:app --reload
 
 Open <http://127.0.0.1:8000>. The default database is `data/tritonradar.db`.
 
-## Gemma
+## Instagram and Gemma setup
 
-Gemma is called through an OpenAI-compatible chat-completions endpoint. Use a vision-capable Gemma 4 model (or a compatible vision-capable Gemma 3 model); a text-only model cannot inspect flyers. Configure a local Ollama server or another compatible gateway:
+Gemma uses an OpenAI-compatible chat-completions endpoint. Configure a vision-capable Gemma 4 model (or compatible vision-capable Gemma 3 model) through Ollama or another compatible gateway. A text-only model cannot inspect event flyers.
 
 ```dotenv
 GEMMA_BASE_URL=http://127.0.0.1:11434/v1
@@ -27,7 +35,9 @@ GEMMA_MODEL=gemma4:e4b
 BRIGHTDATA_API_KEY=your-brightdata-key
 ```
 
-Bright Data's Instagram Posts Discover by URL dataset returns each account's recent post caption, timestamp, URL, and image URL. TritonRadar downloads supported Instagram CDN images (up to `IMAGE_MAX_BYTES`) and sends image bytes plus the caption to Gemma. The Bright Data/Gemma APIs are opt-in and require your own credentials. If either is not configured, directory crawling remains available.
+The ingestion flow reads Instagram handles already stored in the database, asks Bright Data's Instagram Posts Discover by URL dataset for recent posts, then sends each post's caption and image to Gemma. Bright Data and Gemma credentials stay server-side in environment variables; never put them in browser JavaScript. Image retention and API use should follow the relevant provider terms.
+
+If a profile fetch fails, TritonRadar records it in `instagram_account_issues` and continues to the next profile. Explicit “profile not found” errors are skipped in future syncs; ambiguous or temporary failures remain retryable. Review issues with `tritonradar instagram-issues`. To retry a skipped profile, call `POST /api/instagram/issues/{id}/retry`; it will be attempted during the next sync.
 
 ## Commands
 
@@ -42,8 +52,10 @@ tritonradar search "computer science career"
 tritonradar stats
 ```
 
-The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/instagram/issues`, `POST /api/instagram/issues/{id}/retry`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The included UI provides organization search and an Instagram-derived event view with tag filters and source-post links.
+The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/instagram/issues`, `POST /api/instagram/issues/{id}/retry`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The service UI includes organization search and Instagram-derived events with tag filters and source-post links.
 
-Directory crawling uses a descriptive user agent, caching through content hashes, a low request rate, and bounded limits. Instagram post collection is delegated to Bright Data and uses only handles already present in the database. Failed profiles are recorded in `instagram_account_issues`; explicit “profile not found” errors are skipped in later syncs, while transient/API errors remain retryable. Review the issue list with `tritonradar instagram-issues`; mark a missing profile for another attempt with `POST /api/instagram/issues/{id}/retry`. Post records retain the source URL and extraction status. The event extractor returns unknown/null values when dates, cost, location, or audience are unsupported; demographic traits are never inferred. Review extracted events before relying on them as a complete calendar.
+## Event extraction and review
 
-Each record preserves the distinction between deterministic source facts, Gemma classifications, supporting evidence, and unknown fields. SQLite FTS5 powers local search; the repository layer is deliberately small so it can move to PostgreSQL later.
+Gemma extracts event title, dates, location, description, tags, confidence, and evidence from the caption and image. Missing or uncertain details remain unknown. Audience or demographic details are used only when the organization explicitly states them; they are never inferred from people shown in an image or from names. Review extracted details against the original post before treating them as confirmed calendar information.
+
+A suggested event record includes a stable ID, organization, title, start/end time, location, description, tags, eligibility, evidence, confidence, source permalink, source-post timestamp, and review status.
