@@ -1,6 +1,6 @@
-# TritonTrail
+# TritonRadar
 
-TritonTrail turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. It stores organizations and their official social links, fetches bounded post batches through Bright Data, passes post captions and images to a multimodal Gemma model, and makes extracted events available for tag filtering.
+TritonRadar turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. It stores organizations and their official social links, fetches bounded post batches through Bright Data, passes post captions and images to a multimodal Gemma model, and makes extracted events available for tag filtering.
 
 ## Quick start
 
@@ -9,12 +9,12 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 cp .env.example .env
-tritontrail crawl --limit 25 --enrich
-tritontrail instagram --accounts 10
+tritonradar crawl --limit 25 --enrich
+tritonradar instagram --accounts 10
 uvicorn tritontrail.api:app --reload
 ```
 
-Open <http://127.0.0.1:8000>. The default database is `data/tritontrail.db`.
+Open <http://127.0.0.1:8000>. The default database is `data/tritonradar.db`.
 
 ## Gemma
 
@@ -27,18 +27,18 @@ GEMMA_MODEL=gemma4:e4b
 BRIGHTDATA_API_KEY=your-brightdata-key
 ```
 
-Bright Data's Instagram Posts Discover by URL dataset returns each account's recent post caption, timestamp, URL, and image URL. TritonTrail downloads supported Instagram CDN images (up to `IMAGE_MAX_BYTES`) and sends image bytes plus the caption to Gemma. The Bright Data/Gemma APIs are opt-in and require your own credentials. If either is not configured, directory crawling remains available.
+Bright Data's Instagram Posts Discover by URL dataset returns each account's recent post caption, timestamp, URL, and image URL. TritonRadar downloads supported Instagram CDN images (up to `IMAGE_MAX_BYTES`) and sends image bytes plus the caption to Gemma. The Bright Data/Gemma APIs are opt-in and require your own credentials. If either is not configured, directory crawling remains available.
 
 ## Commands
 
 ```bash
-tritontrail crawl --limit 50 --enrich
-tritontrail enrich --limit 50
-tritontrail instagram --accounts 10 --posts-per-account 10
-tritontrail instagram --fetch-only
-tritontrail process-instagram --limit 50
-tritontrail search "computer science career"
-tritontrail stats
+tritonradar crawl --limit 50 --enrich
+tritonradar enrich --limit 50
+tritonradar instagram --accounts 10 --posts-per-account 10
+tritonradar instagram --fetch-only
+tritonradar process-instagram --limit 50
+tritonradar search "computer science career"
+tritonradar stats
 ```
 
 The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The included UI provides organization search and an Instagram-derived event view with tag filters and source-post links.

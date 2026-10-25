@@ -14,7 +14,7 @@ from .instagram import InstagramIngestor
 
 settings.db_path.parent.mkdir(parents=True, exist_ok=True)
 db = Database(settings.db_path)
-app = FastAPI(title="TritonTrail", version="0.1.0")
+app = FastAPI(title="TritonRadar", version="0.1.0")
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

@@ -10,7 +10,7 @@ from .instagram import InstagramIngestor
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="tritontrail")
+    parser = argparse.ArgumentParser(prog="tritonradar")
     sub = parser.add_subparsers(dest="command", required=True)
     crawl = sub.add_parser("crawl", help="Crawl the UCSD directory")
     crawl.add_argument("--limit", type=int)
