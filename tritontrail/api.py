@@ -27,8 +27,7 @@ def home() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict:
-    configured = bool(settings.gemini_api_key) if settings.gemma_provider == "google" else bool(settings.gemma_base_url)
-    return {"ok": True, "database": str(settings.db_path), "gemma_provider": settings.gemma_provider, "gemma_configured": configured}
+    return {"ok": True, "database": str(settings.db_path), "gemma_configured": bool(settings.gemma_base_url)}
 
 
 @app.get("/api/stats")
@@ -66,27 +65,28 @@ def organization(organization_id: str) -> dict:
     return result
 
 
-def run_crawl(limit: int | None, enrich: bool) -> None:
-    Crawler(settings, db).crawl(limit=limit, enrich=enrich)
+def run_crawl(limit: int | None, enrich: bool, pilot: bool = False) -> None:
+    Crawler(settings, db).crawl(limit=limit, enrich=enrich, pilot=pilot)
 
 
 @app.post("/api/crawl", status_code=202)
-def crawl(background_tasks: BackgroundTasks, limit: int | None = Query(None, ge=1, le=1000), enrich: bool = True) -> dict:
-    background_tasks.add_task(run_crawl, limit, enrich)
-    return {"accepted": True, "message": "Crawl queued", "limit": limit, "enrich": enrich}
+def crawl(background_tasks: BackgroundTasks, limit: int | None = Query(None, ge=1, le=1000), enrich: bool = True, pilot: bool = False) -> dict:
+    background_tasks.add_task(run_crawl, limit, enrich, pilot)
+    return {"accepted": True, "message": "Crawl queued", "limit": limit, "enrich": enrich, "pilot": pilot}
 
 
-def run_instagram_sync(account_limit: int | None, posts_per_account: int | None) -> None:
-    InstagramIngestor(settings, db).sync(account_limit, posts_per_account)
+def run_instagram_sync(account_limit: int | None, posts_per_account: int | None, pilot: bool) -> None:
+    InstagramIngestor(settings, db).sync(account_limit, posts_per_account, pilot=pilot)
 
 
 @app.post("/api/instagram/sync", status_code=202)
 def instagram_sync(background_tasks: BackgroundTasks,
                    account_limit: int | None = Query(None, ge=1, le=1000),
-                   posts_per_account: int | None = Query(None, ge=1, le=100)) -> dict:
+                   posts_per_account: int | None = Query(None, ge=1, le=100),
+                   pilot: bool = False) -> dict:
     if not settings.brightdata_api_key:
         raise HTTPException(status_code=503, detail="BRIGHTDATA_API_KEY is not configured")
     if not settings.gemma_base_url:
         raise HTTPException(status_code=503, detail="GEMMA_BASE_URL is not configured")
-    background_tasks.add_task(run_instagram_sync, account_limit, posts_per_account)
-    return {"accepted": True, "message": "Instagram fetch and event extraction queued", "account_limit": account_limit, "posts_per_account": posts_per_account}
+    background_tasks.add_task(run_instagram_sync, account_limit, posts_per_account, pilot)
+    return {"accepted": True, "message": "Instagram fetch and event extraction queued", "account_limit": account_limit, "posts_per_account": posts_per_account, "pilot": pilot}

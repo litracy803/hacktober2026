@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 
 from .config import settings
 from .crawler import Crawler
@@ -15,10 +16,13 @@ def main() -> None:
     crawl = sub.add_parser("crawl", help="Crawl the UCSD directory")
     crawl.add_argument("--limit", type=int)
     crawl.add_argument("--enrich", action="store_true")
+    crawl.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
     enrich = sub.add_parser("enrich", help="Enrich pending organizations with Gemma")
     enrich.add_argument("--limit", type=int, default=50)
+    enrich.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
     socials = sub.add_parser("socials", help="Discover social links from official club websites")
     socials.add_argument("--limit", type=int, default=100)
+    socials.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
     search = sub.add_parser("search", help="Search indexed organizations")
     search.add_argument("query", nargs="?", default="")
     search.add_argument("--tag")
@@ -27,26 +31,32 @@ def main() -> None:
     instagram.add_argument("--accounts", type=int)
     instagram.add_argument("--posts-per-account", type=int)
     instagram.add_argument("--fetch-only", action="store_true")
+    instagram.add_argument("--pilot", action="store_true", help="Restrict Instagram fetch and extraction to the curated 10-club pilot cohort")
     process = sub.add_parser("process-instagram", help="Process saved Instagram posts with Gemma")
     process.add_argument("--limit", type=int, default=50)
+    process.add_argument("--pilot", action="store_true", help="Restrict extraction to the curated 10-club pilot cohort")
     issues = sub.add_parser("instagram-issues", help="List Instagram profiles that need attention")
     issues.add_argument("--all", action="store_true", help="Include issues that later recovered")
     issues.add_argument("--limit", type=int, default=200)
     args = parser.parse_args()
     db = Database(settings.db_path)
+    def progress(current: int, total: int, label: str) -> None:
+        percent = int((current / total) * 100) if total else 100
+        print(f"[{current}/{total} {percent:3d}%] {label}", file=sys.stderr, flush=True)
+
     if args.command == "crawl":
-        result = Crawler(settings, db).crawl(args.limit, args.enrich)
+        result = Crawler(settings, db).crawl(args.limit, args.enrich, progress, args.pilot)
     elif args.command == "enrich":
-        result = Crawler(settings, db).enrich_pending(args.limit)
+        result = Crawler(settings, db).enrich_pending(args.limit, progress, args.pilot)
     elif args.command == "socials":
-        result = Crawler(settings, db).discover_socials(args.limit)
+        result = Crawler(settings, db).discover_socials(args.limit, progress, args.pilot)
     elif args.command == "search":
         result = db.search(args.query, args.tag)
     elif args.command == "instagram":
         ingestor = InstagramIngestor(settings, db)
-        result = ingestor.fetch_posts(args.accounts, args.posts_per_account) if args.fetch_only else ingestor.sync(args.accounts, args.posts_per_account)
+        result = ingestor.fetch_posts(args.accounts, args.posts_per_account, args.pilot) if args.fetch_only else ingestor.sync(args.accounts, args.posts_per_account, pilot=args.pilot)
     elif args.command == "process-instagram":
-        result = InstagramIngestor(settings, db).process_pending(args.limit)
+        result = InstagramIngestor(settings, db).process_pending(args.limit, args.pilot)
     elif args.command == "instagram-issues":
         result = db.instagram_issues(args.all, args.limit)
     else:
