@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from .config import Settings
+from .extraction import SOCIAL_HOSTS, social_link
 
 PROMPT_VERSION = "v1"
 TAGS = ["academic", "career", "cultural", "faith", "hobby", "performance", "service", "social", "sport", "technology", "health", "political", "identity-community", "graduate", "undergraduate"]
@@ -88,6 +89,54 @@ Source text:\n{source_text[:12000]}"""
             return payload, raw, None
         except Exception as exc:
             return fallback_payload(official_name, description), "", str(exc)
+
+    def discover_socials(self, official_name: str, directory_url: str, source_text: str) -> tuple[list[dict[str, str]], str, str | None]:
+        """Find public social profiles with Google-grounded Gemma output.
+
+        Results are deliberately stored as ``search_grounded_candidate``. A
+        search result is useful for review, but it is not equivalent to a
+        link published by the organization itself.
+        """
+        if self.settings.gemma_provider != "google" or not self.settings.gemini_api_key:
+            return [], "", "Google Gemma is not configured"
+        prompt = f"""Find the official public social-media profiles for this UC San Diego student organization using Google Search grounding. Return JSON only.
+Never guess a handle or use a similarly named organization. Prefer a profile linked from the organization's own site, UC San Diego, or a search result whose name and campus affiliation clearly match. If no profile can be supported, return an empty list.
+Allowed platforms: instagram, facebook, tiktok, youtube, linkedin, discord, linktree.
+Schema: {{\"profiles\": [{{\"platform\": \"instagram|facebook|tiktok|youtube|linkedin|discord|linktree\", \"url\": string, \"handle\": string, \"evidence\": string, \"confidence\": \"high|medium|low\"}}]}}
+Organization: {official_name}
+Official directory page: {directory_url}
+Directory context:
+{source_text[:6000]}"""
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=self.settings.gemini_api_key)
+            # googleSearch is the field name emitted by Google AI Studio's
+            # generated Python snippet; the SDK accepts this alias.
+            config = types.GenerateContentConfig(
+                temperature=0,
+                tools=[types.Tool(googleSearch=types.GoogleSearch())],
+            )
+            response = client.models.generate_content(model=self.settings.gemma_model, contents=prompt, config=config)
+            raw = response.text or ""
+            text = raw.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            payload = json.loads(text)
+            profiles: list[dict[str, str]] = []
+            for item in payload.get("profiles", []):
+                if not isinstance(item, dict) or not item.get("url") or item.get("platform") not in SOCIAL_HOSTS.values():
+                    continue
+                parsed = social_link(str(item["url"]), directory_url, str(item.get("evidence", "")))
+                if not parsed:
+                    continue
+                parsed["verification"] = "search_grounded_candidate"
+                parsed["evidence"] = str(item.get("evidence", ""))[:2000]
+                profiles.append(parsed)
+            return profiles, raw, None
+        except Exception as exc:
+            return [], "", str(exc)
     def extract_event(self, organization: str, caption: str, post_url: str, image_bytes: bytes | None = None, mime_type: str = "image/jpeg") -> tuple[dict[str, Any], str, str | None]:
         """Extract a calendar event from post text and, when available, its flyer image."""
         prompt = f"""Extract a campus event from this public student-organization Instagram post. Return JSON only.

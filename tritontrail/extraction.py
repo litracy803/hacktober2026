@@ -42,15 +42,53 @@ def social_link(url: str, source_url: str, evidence: str = "") -> dict[str, str]
 
 
 def social_handles_from_text(text: str, source_url: str) -> list[dict[str, str]]:
-    """Convert explicit directory handles such as 'Social Media @ds3atucsd' into candidates."""
+    """Convert explicit directory social fields into conservative candidates.
+
+    The UCSD directory uses both ``@handle`` and bare values such as
+    ``acm.at.ucsd`` after the ``Social Media`` label.  The latter was being
+    missed by the original extractor, which made the apparent discovery rate
+    much lower than the source actually supports.
+    """
     results: list[dict[str, str]] = []
+    seen: set[str] = set()
+    # Prefer the bounded field so words from the following directory sections
+    # (for example, a fund manager's name) cannot become handles.
+    field_pattern = re.compile(
+        r"(?:social\s+media|instagram|ig)\s*[:：-]?\s*"
+        r"(https?://[^\s]+|@[A-Za-z0-9_.-]+|[A-Za-z][A-Za-z0-9_.-]{2,})"
+        r"(?=\s+(?:fund\s+manager|principal\s+members|organization\s+constitution|student\s+organization\s+advisor)\b|$)",
+        re.I,
+    )
+    for match in field_pattern.finditer(text):
+        value = match.group(1).strip().rstrip(".,;)")
+        context = text[max(0, match.start() - 40):min(len(text), match.end() + 80)]
+        if value.lower().startswith(("http://", "https://")):
+            parsed = social_link(value, source_url, context)
+            if parsed and parsed["url"] not in seen:
+                parsed["verification"] = "directory_link"
+                results.append(parsed)
+                seen.add(parsed["url"])
+            continue
+        handle = value.lstrip("@").lower()
+        if handle in GENERIC_SOCIAL_HANDLES or "@" in handle or handle in {"fund", "manager", "principal", "members"}:
+            continue
+        url = f"https://www.instagram.com/{handle}"
+        if url in seen:
+            continue
+        results.append({"platform": "instagram", "handle": handle, "url": url, "verification": "directory_handle_candidate", "evidence": context, "source_url": source_url})
+        seen.add(url)
+
+    # Also support a handle explicitly attached to a sentence that does not
+    # have a bounded field value (for example, older directory templates).
     pattern = re.compile(r"(?:social\s+media|instagram|ig)\s*[:：-]?\s*@([A-Za-z0-9_.-]+)", re.I)
     for match in pattern.finditer(text):
         handle = match.group(1).lower().rstrip(".,")
-        if handle in GENERIC_SOCIAL_HANDLES:
+        url = f"https://www.instagram.com/{handle}"
+        if handle in GENERIC_SOCIAL_HANDLES or url in seen:
             continue
         context = text[max(0, match.start() - 40):min(len(text), match.end() + 40)]
-        results.append({"platform": "instagram", "handle": handle, "url": f"https://www.instagram.com/{handle}", "verification": "directory_handle_candidate", "evidence": context, "source_url": source_url})
+        results.append({"platform": "instagram", "handle": handle, "url": url, "verification": "directory_handle_candidate", "evidence": context, "source_url": source_url})
+        seen.add(url)
     return results
 
 

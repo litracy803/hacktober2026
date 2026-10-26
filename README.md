@@ -1,6 +1,6 @@
-# TritonRadar - UC San Diego events
+# TritonTrail - UC San Diego events
 
-TritonRadar turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. The project includes a browser calendar prototype and a Python ingestion service that can collect organization posts through Bright Data and extract events with a vision-capable Gemma model.
+TritonTrail turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. The project includes a browser calendar prototype and a Python ingestion service that can collect organization posts through Bright Data and extract events with a vision-capable Gemma model.
 
 ## Run the frontend prototype
 
@@ -21,7 +21,7 @@ tritontrail crawl --limit 25 --enrich
 tritontrail instagram --accounts 10
 tritontrail crawl --pilot
 tritontrail enrich --pilot
-tritontrail socials --pilot
+tritontrail socials --pilot --offline
 tritontrail crawl --pilot --fast
 tritontrail enrich --pilot --fast
 uvicorn tritontrail.api:app --reload
@@ -61,6 +61,8 @@ If a profile fetch fails, TritonTrail records it in `instagram_account_issues` a
 The `--pilot` flag selects a stable 10-club cohort covering data science, computing, CASA/cultural, social, performance, service, identity/cultural, health-professional, sport, and product-management organizations. It is intended for repeatable end-to-end testing instead of relying on directory order.
 
 `--fast` skips linked-club-website discovery during crawl/enrichment. Run `socials --pilot` afterward when you want the slower social-link pass.
+
+`socials --offline` re-processes saved UCSD directory pages without network requests. It recognizes both `@handles` and bare values in the directory's Social Media field. Add `--search` to ask Google-grounded Gemma for candidates only for clubs that still have no Instagram result; these are labeled `search_grounded_candidate` for review.
 
 ## Commands
 

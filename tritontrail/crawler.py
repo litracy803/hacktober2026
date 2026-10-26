@@ -8,7 +8,7 @@ import httpx
 
 from .config import Settings
 from .db import Database
-from .extraction import GENERIC_SOCIAL_HANDLES, parse_directory, parse_page
+from .extraction import GENERIC_SOCIAL_HANDLES, parse_directory, parse_page, social_handles_from_text
 from .gemma import GemmaClient, input_hash
 from .pilot import matches_pilot
 
@@ -124,20 +124,38 @@ class Crawler:
                 progress(index, total, org["official_name"])
         return {"enriched": done, "failed": failed}
 
-    def discover_socials(self, limit: int = 100, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False, fast: bool = False) -> dict[str, int]:
+    def discover_socials(self, limit: int = 100, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False, fast: bool = False, offline: bool = False, search: bool = False) -> dict[str, int]:
         processed = 0
         discovered = 0
         organizations = self.db.organizations(limit, matches_pilot if pilot else None)
         total = len(organizations)
         for index, org in enumerate(organizations, 1):
             try:
-                html = self.fetch(org["directory_url"])
-                page = parse_page(html, org["directory_url"])
                 before = self.db.get(org["id"]) or {}
                 old_count = len(before.get("social_accounts", []))
-                self.db.save_social_links(org["id"], page.get("links", []))
-                self.db.clear_social_links(org["id"], "official_site_link")
-                self._discover_from_official_sites(org["id"], org["official_name"], page.get("external_links", []))
+                if offline:
+                    # Re-run extraction against saved pages. This is fast,
+                    # deterministic, and still grounded in the official
+                    # source that was already fetched.
+                    links: list[dict[str, str]] = []
+                    for source in self.db.sources_for(org["id"]):
+                        links.extend(social_handles_from_text(source.get("raw_text", ""), source["url"]))
+                    self.db.save_social_links(org["id"], links)
+                    if search:
+                        saved = self.db.sources_for(org["id"])
+                        source_text = " ".join(source.get("raw_text", "") for source in saved)
+                        if not any(account.get("platform") == "instagram" for account in (self.db.get(org["id"]) or {}).get("social_accounts", [])):
+                            candidates, _, _ = self.gemma.discover_socials(org["official_name"], org["directory_url"], source_text)
+                            self.db.save_social_links(org["id"], candidates)
+                else:
+                    html = self.fetch(org["directory_url"])
+                    page = parse_page(html, org["directory_url"])
+                    self.db.save_social_links(org["id"], page.get("links", []))
+                    self.db.clear_social_links(org["id"], "official_site_link")
+                    self._discover_from_official_sites(org["id"], org["official_name"], page.get("external_links", []))
+                    if search and not any(account.get("platform") == "instagram" for account in (self.db.get(org["id"]) or {}).get("social_accounts", [])):
+                        candidates, _, _ = self.gemma.discover_socials(org["official_name"], org["directory_url"], page.get("text", ""))
+                        self.db.save_social_links(org["id"], candidates)
                 after = self.db.get(org["id"]) or {}
                 discovered += max(0, len(after.get("social_accounts", [])) - old_count)
                 processed += 1

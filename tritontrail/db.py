@@ -131,6 +131,14 @@ class Database:
             result["evidence"] = [dict(r) for r in conn.execute("SELECT field_name,quote,source_url,confidence FROM evidence WHERE organization_id=? ORDER BY id", (organization_id,))]
             return result
 
+    def sources_for(self, organization_id: str) -> list[dict[str, Any]]:
+        """Return previously fetched source text for offline re-processing."""
+        with self.connection() as conn:
+            return [dict(r) for r in conn.execute(
+                "SELECT url, source_type, raw_text FROM sources WHERE organization_id=? ORDER BY fetched_at DESC",
+                (organization_id,),
+            )]
+
     @staticmethod
     def _summary(conn: sqlite3.Connection, row: dict[str, Any]) -> dict[str, Any]:
         row["features"] = [r[0] for r in conn.execute("SELECT tag FROM features WHERE organization_id=? ORDER BY tag", (row["id"],))]
@@ -252,4 +260,14 @@ class Database:
 
     def stats(self) -> dict[str, int]:
         with self.connection() as conn:
-            return {"organizations": conn.execute("SELECT COUNT(*) FROM organizations").fetchone()[0], "enriched": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='enriched'").fetchone()[0], "social_accounts": conn.execute("SELECT COUNT(*) FROM social_accounts").fetchone()[0], "review_needed": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='review_needed'").fetchone()[0], "instagram_posts": conn.execute("SELECT COUNT(*) FROM social_posts").fetchone()[0], "events": conn.execute("SELECT COUNT(*) FROM social_posts WHERE extraction_status='processed' AND json_extract(event_data, '$.is_event')=1").fetchone()[0], "instagram_account_issues": conn.execute("SELECT COUNT(*) FROM instagram_account_issues WHERE status!='recovered'").fetchone()[0]}
+            return {
+                "organizations": conn.execute("SELECT COUNT(*) FROM organizations").fetchone()[0],
+                "enriched": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='enriched'").fetchone()[0],
+                "social_accounts": conn.execute("SELECT COUNT(*) FROM social_accounts").fetchone()[0],
+                "instagram_organizations": conn.execute("SELECT COUNT(DISTINCT organization_id) FROM social_accounts WHERE platform='instagram'").fetchone()[0],
+                "social_candidates": conn.execute("SELECT COUNT(*) FROM social_accounts WHERE verification LIKE '%candidate'").fetchone()[0],
+                "review_needed": conn.execute("SELECT COUNT(*) FROM organizations WHERE enrichment_status='review_needed'").fetchone()[0],
+                "instagram_posts": conn.execute("SELECT COUNT(*) FROM social_posts").fetchone()[0],
+                "events": conn.execute("SELECT COUNT(*) FROM social_posts WHERE extraction_status='processed' AND json_extract(event_data, '$.is_event')=1").fetchone()[0],
+                "instagram_account_issues": conn.execute("SELECT COUNT(*) FROM instagram_account_issues WHERE status!='recovered'").fetchone()[0],
+            }

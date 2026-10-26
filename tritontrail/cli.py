@@ -25,6 +25,8 @@ def main() -> None:
     socials = sub.add_parser("socials", help="Discover social links from official club websites")
     socials.add_argument("--limit", type=int, default=100)
     socials.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
+    socials.add_argument("--offline", action="store_true", help="Re-process saved official source pages without network requests")
+    socials.add_argument("--search", action="store_true", help="Ask Google-grounded Gemma for candidates where no Instagram link was found")
     search = sub.add_parser("search", help="Search indexed organizations")
     search.add_argument("query", nargs="?", default="")
     search.add_argument("--tag")
@@ -49,7 +51,7 @@ def main() -> None:
     elif args.command == "enrich":
         result = Crawler(settings, db).enrich_pending(args.limit, progress, args.pilot, args.fast)
     elif args.command == "socials":
-        result = Crawler(settings, db).discover_socials(args.limit, progress, args.pilot)
+        result = Crawler(settings, db).discover_socials(args.limit, progress, args.pilot, offline=args.offline, search=args.search)
     elif args.command == "search":
         result = db.search(args.query, args.tag)
     elif args.command == "instagram":
