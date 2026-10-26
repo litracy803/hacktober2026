@@ -11,10 +11,11 @@ from .config import settings
 from .crawler import Crawler
 from .db import Database
 from .instagram import InstagramIngestor
+from .pilot import matches_pilot
 
 settings.db_path.parent.mkdir(parents=True, exist_ok=True)
 db = Database(settings.db_path)
-app = FastAPI(title="TritonRadar", version="0.1.0")
+app = FastAPI(title="TritonTrail", version="0.1.0")
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -37,8 +38,11 @@ def stats() -> dict:
 
 
 @app.get("/api/organizations")
-def organizations(q: str = "", tag: str | None = None, limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0)) -> dict:
-    return {"items": db.search(q, tag, limit, offset), "limit": limit, "offset": offset}
+def organizations(q: str = "", tag: str | None = None, pilot: bool = False, limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0)) -> dict:
+    if pilot:
+        items = [item for item in db.search(q, tag, 1000, 0) if matches_pilot(item["official_name"])]
+        return {"items": items[offset:offset + limit], "limit": limit, "offset": offset, "pilot": True}
+    return {"items": db.search(q, tag, limit, offset), "limit": limit, "offset": offset, "pilot": False}
 
 
 @app.get("/api/events")

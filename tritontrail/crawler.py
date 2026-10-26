@@ -36,7 +36,7 @@ class Crawler:
         assert last_error is not None
         raise last_error
 
-    def crawl(self, limit: int | None = None, enrich: bool = False, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False) -> dict[str, int]:
+    def crawl(self, limit: int | None = None, enrich: bool = False, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False, fast: bool = False) -> dict[str, int]:
         directory_html = self.fetch(self.settings.directory_url)
         organizations = parse_directory(directory_html, self.settings.directory_url)
         if pilot:
@@ -54,7 +54,8 @@ class Crawler:
                 self.db.upsert_organization(org)
                 self.db.save_source(org["id"], {"url": org["directory_url"], "source_type": "ucsd_directory", "content_hash": page["content_hash"], "raw_text": page["text"]})
                 self.db.save_social_links(org["id"], page["links"])
-                self._discover_from_official_sites(org["id"], org["official_name"], page.get("external_links", []))
+                if not fast:
+                    self._discover_from_official_sites(org["id"], org["official_name"], page.get("external_links", []))
                 if enrich:
                     payload, raw, error = self.gemma.enrich(org["official_name"], description, page["text"], org["directory_url"])
                     status = "enriched" if error is None else "pending_enrichment"
@@ -103,7 +104,7 @@ class Crawler:
                 continue
             time.sleep(self.settings.crawl_delay_seconds)
 
-    def enrich_pending(self, limit: int = 50, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False) -> dict[str, int]:
+    def enrich_pending(self, limit: int = 50, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False, fast: bool = False) -> dict[str, int]:
         done = 0
         failed = 0
         organizations = self.db.pending_enrichment(limit, matches_pilot if pilot else None)
@@ -112,7 +113,8 @@ class Crawler:
             try:
                 html = self.fetch(org["directory_url"])
                 page = parse_page(html, org["directory_url"])
-                self._discover_from_official_sites(org["id"], org["official_name"], page.get("external_links", []))
+                if not fast:
+                    self._discover_from_official_sites(org["id"], org["official_name"], page.get("external_links", []))
                 payload, raw, error = self.gemma.enrich(org["official_name"], org["description"], page["text"], org["directory_url"])
                 self.db.save_enrichment(org["id"], payload, raw, self.settings.gemma_model, input_hash(page["text"]), "enriched" if error is None else "pending_enrichment", error)
                 done += 1
@@ -122,7 +124,7 @@ class Crawler:
                 progress(index, total, org["official_name"])
         return {"enriched": done, "failed": failed}
 
-    def discover_socials(self, limit: int = 100, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False) -> dict[str, int]:
+    def discover_socials(self, limit: int = 100, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False, fast: bool = False) -> dict[str, int]:
         processed = 0
         discovered = 0
         organizations = self.db.organizations(limit, matches_pilot if pilot else None)

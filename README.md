@@ -17,15 +17,17 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 cp .env.example .env
-tritonradar crawl --limit 25 --enrich
-tritonradar instagram --accounts 10
-tritonradar crawl --pilot
-tritonradar enrich --pilot
-tritonradar socials --pilot
+tritontrail crawl --limit 25 --enrich
+tritontrail instagram --accounts 10
+tritontrail crawl --pilot
+tritontrail enrich --pilot
+tritontrail socials --pilot
+tritontrail crawl --pilot --fast
+tritontrail enrich --pilot --fast
 uvicorn tritontrail.api:app --reload
 ```
 
-Open <http://127.0.0.1:8000>. The default database is `data/tritonradar.db`.
+Open <http://127.0.0.1:8000>. The default database is `data/tritontrail.db`.
 
 ## Instagram and Gemma setup
 
@@ -54,22 +56,24 @@ BRIGHTDATA_API_KEY=your-brightdata-key
 If the selected provider is not configured, crawling still works and stores deterministic data plus a keyword-based fallback marked `pending_enrichment`.
 The ingestion flow reads Instagram handles already stored in the database, asks Bright Data's Instagram Posts Discover by URL dataset for recent posts, then sends each post's caption and image to Gemma. Bright Data and Gemma credentials stay server-side in environment variables; never put them in browser JavaScript. Image retention and API use should follow the relevant provider terms.
 
-If a profile fetch fails, TritonRadar records it in `instagram_account_issues` and continues to the next profile. Explicit “profile not found” errors are skipped in future syncs; ambiguous or temporary failures remain retryable. Review issues with `tritonradar instagram-issues`. To retry a skipped profile, call `POST /api/instagram/issues/{id}/retry`; it will be attempted during the next sync.
+If a profile fetch fails, TritonTrail records it in `instagram_account_issues` and continues to the next profile. Explicit “profile not found” errors are skipped in future syncs; ambiguous or temporary failures remain retryable. Review issues with `tritontrail instagram-issues`. To retry a skipped profile, call `POST /api/instagram/issues/{id}/retry`; it will be attempted during the next sync.
 
 The `--pilot` flag selects a stable 10-club cohort covering data science, computing, CASA/cultural, social, performance, service, identity/cultural, health-professional, sport, and product-management organizations. It is intended for repeatable end-to-end testing instead of relying on directory order.
+
+`--fast` skips linked-club-website discovery during crawl/enrichment. Run `socials --pilot` afterward when you want the slower social-link pass.
 
 ## Commands
 
 ```bash
-tritonradar crawl --limit 50 --enrich
-tritonradar enrich --limit 50
+tritontrail crawl --limit 50 --enrich
+tritontrail enrich --limit 50
 tritontrail socials --limit 100
-tritonradar instagram --accounts 10 --posts-per-account 10
-tritonradar instagram --fetch-only
-tritonradar process-instagram --limit 50
-tritonradar instagram-issues
-tritonradar search "computer science career"
-tritonradar stats
+tritontrail instagram --accounts 10 --posts-per-account 10
+tritontrail instagram --fetch-only
+tritontrail process-instagram --limit 50
+tritontrail instagram-issues
+tritontrail search "computer science career"
+tritontrail stats
 ```
 The `socials` command revisits each organization’s UCSD profile, follows up to three explicitly linked official websites, and extracts public Instagram, Facebook, TikTok, YouTube, LinkedIn, Discord, and Linktree URLs. It never logs into or crawls those social platforms. The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/stats`, and `POST /api/crawl`. The included UI provides search, source links, feature confidence, social-link verification state, and evidence snippets.
 

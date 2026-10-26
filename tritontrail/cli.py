@@ -11,15 +11,17 @@ from .instagram import InstagramIngestor
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="tritonradar")
+    parser = argparse.ArgumentParser(prog="tritontrail")
     sub = parser.add_subparsers(dest="command", required=True)
     crawl = sub.add_parser("crawl", help="Crawl the UCSD directory")
     crawl.add_argument("--limit", type=int)
     crawl.add_argument("--enrich", action="store_true")
     crawl.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
+    crawl.add_argument("--fast", action="store_true", help="Skip linked-club-website discovery during this pass")
     enrich = sub.add_parser("enrich", help="Enrich pending organizations with Gemma")
     enrich.add_argument("--limit", type=int, default=50)
     enrich.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
+    enrich.add_argument("--fast", action="store_true", help="Skip linked-club-website discovery during this pass")
     socials = sub.add_parser("socials", help="Discover social links from official club websites")
     socials.add_argument("--limit", type=int, default=100)
     socials.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
@@ -43,9 +45,9 @@ def main() -> None:
         print(f"[{current}/{total} {percent:3d}%] {label}", file=sys.stderr, flush=True)
 
     if args.command == "crawl":
-        result = Crawler(settings, db).crawl(args.limit, args.enrich, progress, args.pilot)
+        result = Crawler(settings, db).crawl(args.limit, args.enrich, progress, args.pilot, args.fast)
     elif args.command == "enrich":
-        result = Crawler(settings, db).enrich_pending(args.limit, progress, args.pilot)
+        result = Crawler(settings, db).enrich_pending(args.limit, progress, args.pilot, args.fast)
     elif args.command == "socials":
         result = Crawler(settings, db).discover_socials(args.limit, progress, args.pilot)
     elif args.command == "search":

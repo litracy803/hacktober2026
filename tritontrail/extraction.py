@@ -41,6 +41,19 @@ def social_link(url: str, source_url: str, evidence: str = "") -> dict[str, str]
     return {"platform": platform, "handle": handle or "", "url": url, "verification": "official_link", "evidence": evidence, "source_url": source_url}
 
 
+def social_handles_from_text(text: str, source_url: str) -> list[dict[str, str]]:
+    """Convert explicit directory handles such as 'Social Media @ds3atucsd' into candidates."""
+    results: list[dict[str, str]] = []
+    pattern = re.compile(r"(?:social\s+media|instagram|ig)\s*[:：-]?\s*@([A-Za-z0-9_.-]+)", re.I)
+    for match in pattern.finditer(text):
+        handle = match.group(1).lower().rstrip(".,")
+        if handle in GENERIC_SOCIAL_HANDLES:
+            continue
+        context = text[max(0, match.start() - 40):min(len(text), match.end() + 40)]
+        results.append({"platform": "instagram", "handle": handle, "url": f"https://www.instagram.com/{handle}", "verification": "directory_handle_candidate", "evidence": context, "source_url": source_url})
+    return results
+
+
 def parse_page(html: str, url: str, include_chrome_links: bool = False) -> dict:
     soup = BeautifulSoup(html, "html.parser")
     for node in soup(["script", "style", "noscript"]):
@@ -65,6 +78,7 @@ def parse_page(html: str, url: str, include_chrome_links: bool = False) -> dict:
         elif urlparse(target).netloc and urlparse(target).netloc != urlparse(url).netloc:
             external_links.append(target)
     title = clean(soup.title.get_text(" ")) if soup.title else ""
+    links.extend(social_handles_from_text(text, url))
     return {"url": url, "title": title, "text": text, "links": links, "external_links": external_links[:10], "content_hash": content_hash(text)}
 
 
