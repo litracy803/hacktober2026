@@ -2,27 +2,34 @@
 
 TritonRadar turns UC San Diego student-organization information and public Instagram announcements into a searchable, evidence-backed campus event directory. The project includes a browser calendar prototype and a Python ingestion service that can collect organization posts through Bright Data and extract events with a vision-capable Gemma model.
 
-## Run the frontend prototype
+## Run the connected app
 
-Open `index.html` in a browser. The current demo uses illustrative sample events so the calendar and filters can be reviewed without API credentials.
+Run FastAPI to serve the TritonRadar frontend and connect it to the event API. If there are no processed event records yet, the frontend shows illustrative sample cards. Opening `index.html` directly with `file://` only runs the demo; use the server URL for backend data.
 
-The default view is a Monday–Sunday calendar grid. Use the arrows to move between weeks and **Today** to jump to the current week. Event cards show start and end times and include an **Add to calendar** `.ics` download. The calendar filters event format, practical/social interests, majors/interests, and location. Multiple selected filters use broad matching; search text narrows those results. The filter sidebar can be collapsed and reopened with the Filters button.
+The default view shows three consecutive days. Use the arrows to move by three days and **Today** to jump to the current date. Event cards include Google Calendar, Outlook, and `.ics` options. Tags, organization, location, and the Instagram permalink (when available) are included in event details. Busy-time blocks remain in browser storage because this prototype has no user accounts.
 
-Each ingested event should populate `imageUrl` from the Instagram post image and `sourceUrl` with that post's permalink. Sample events leave those fields empty, so the UI shows a preview placeholder and “Post link pending” rather than implying mock media or links are real.
+Each ingested event should populate `imageUrl` from the Instagram post image and `sourceUrl` with that post's permalink. Sample events leave those fields empty, so the UI shows a preview placeholder and “Post link pending.”
 
 ## Run the ingestion service
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-cp .env.example .env
-tritonradar crawl --limit 25 --enrich
-tritonradar instagram --accounts 10
-uvicorn tritontrail.api:app --reload
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+Copy-Item .env.example .env
+.\.venv\Scripts\python.exe -m uvicorn tritontrail.api:app --reload
 ```
 
-Open <http://127.0.0.1:8000>. The default database is `data/tritonradar.db`.
+Open <http://127.0.0.1:8000> to use the connected app. The frontend reads processed events from `GET /api/events`; until the database has events, it shows demo cards. Busy-time blocks remain in browser storage because this prototype has no user accounts.
+
+To ingest real events, add your `BRIGHTDATA_API_KEY` and `GEMINI_API_KEY` to `.env`. Keep the server running, open a second PowerShell window in the project folder, then run:
+
+```powershell
+.\.venv\Scripts\tritonradar.exe crawl --limit 25 --enrich
+.\.venv\Scripts\tritonradar.exe socials --limit 100
+.\.venv\Scripts\tritonradar.exe instagram --accounts 10
+```
+
+Refresh the browser page after the sync finishes. The default database is `data/tritonradar.db`.
 
 ## Instagram and Gemma setup
 
@@ -83,4 +90,8 @@ Event cards have an app-owned calendar menu with Google Calendar, Outlook, and d
 ## Three-day calendar and busy times
 
 The calendar now displays three consecutive days at once, with previous/next controls moving by three days. In the sidebar, **Busy times** lets students add recurring weekday intervals (such as Tuesday 5:00–8:00 PM); events that overlap any saved interval are filtered out. Busy intervals are saved in the browser's local storage on that device. The calendar cards use a full-width Add to calendar menu.
+
+
+
+
 

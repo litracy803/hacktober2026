@@ -16,13 +16,16 @@ settings.db_path.parent.mkdir(parents=True, exist_ok=True)
 db = Database(settings.db_path)
 app = FastAPI(title="TritonRadar", version="0.1.0")
 
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+FRONTEND_DIR = PROJECT_DIR / "src"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/src", StaticFiles(directory=FRONTEND_DIR), name="frontend")
 
 
 @app.get("/", include_in_schema=False)
 def home() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(PROJECT_DIR / "index.html")
 
 
 @app.get("/api/health")
@@ -90,3 +93,5 @@ def instagram_sync(background_tasks: BackgroundTasks,
         raise HTTPException(status_code=503, detail="GEMMA_BASE_URL is not configured")
     background_tasks.add_task(run_instagram_sync, account_limit, posts_per_account)
     return {"accepted": True, "message": "Instagram fetch and event extraction queued", "account_limit": account_limit, "posts_per_account": posts_per_account}
+
+
