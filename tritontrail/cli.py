@@ -31,8 +31,10 @@ def main() -> None:
     instagram.add_argument("--accounts", type=int)
     instagram.add_argument("--posts-per-account", type=int)
     instagram.add_argument("--fetch-only", action="store_true")
+    instagram.add_argument("--pilot", action="store_true", help="Restrict Instagram fetch and extraction to the curated 10-club pilot cohort")
     process = sub.add_parser("process-instagram", help="Process saved Instagram posts with Gemma")
     process.add_argument("--limit", type=int, default=50)
+    process.add_argument("--pilot", action="store_true", help="Restrict extraction to the curated 10-club pilot cohort")
     issues = sub.add_parser("instagram-issues", help="List Instagram profiles that need attention")
     issues.add_argument("--all", action="store_true", help="Include issues that later recovered")
     issues.add_argument("--limit", type=int, default=200)
@@ -52,9 +54,9 @@ def main() -> None:
         result = db.search(args.query, args.tag)
     elif args.command == "instagram":
         ingestor = InstagramIngestor(settings, db)
-        result = ingestor.fetch_posts(args.accounts, args.posts_per_account) if args.fetch_only else ingestor.sync(args.accounts, args.posts_per_account)
+        result = ingestor.fetch_posts(args.accounts, args.posts_per_account, args.pilot) if args.fetch_only else ingestor.sync(args.accounts, args.posts_per_account, pilot=args.pilot)
     elif args.command == "process-instagram":
-        result = InstagramIngestor(settings, db).process_pending(args.limit)
+        result = InstagramIngestor(settings, db).process_pending(args.limit, args.pilot)
     elif args.command == "instagram-issues":
         result = db.instagram_issues(args.all, args.limit)
     else:

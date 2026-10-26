@@ -10,6 +10,7 @@ import httpx
 from .config import Settings
 from .db import Database
 from .gemma import GemmaClient
+from .pilot import matches_pilot
 
 BRIGHTDATA_URL = "https://api.brightdata.com/datasets/v3/scrape"
 PROFILE_MISSING_MARKERS = (
@@ -93,8 +94,8 @@ class InstagramIngestor:
                                "posted_at": post.get("datetime"), "location": location})
         return normalized
 
-    def fetch_posts(self, account_limit: int | None = None, posts_per_account: int | None = None) -> dict[str, int]:
-        accounts = self.db.instagram_accounts(account_limit)
+    def fetch_posts(self, account_limit: int | None = None, posts_per_account: int | None = None, pilot: bool = False) -> dict[str, int]:
+        accounts = self.db.instagram_accounts(account_limit, matches_pilot if pilot else None)
         counts = {"accounts": len(accounts), "posts_received": 0, "posts_saved": 0, "failed": 0, "profiles_missing": 0}
         for account in accounts:
             try:
@@ -135,8 +136,8 @@ class InstagramIngestor:
                 chunks.append(chunk)
         return b"".join(chunks), mime_type
 
-    def process_pending(self, limit: int = 50) -> dict[str, int]:
-        posts = self.db.pending_posts(limit)
+    def process_pending(self, limit: int = 50, pilot: bool = False) -> dict[str, int]:
+        posts = self.db.pending_posts(limit, matches_pilot if pilot else None)
         counts = {"processed": 0, "events": 0, "failed": 0}
         for post in posts:
             try:
@@ -155,7 +156,7 @@ class InstagramIngestor:
                 counts["failed"] += 1
         return counts
 
-    def sync(self, account_limit: int | None = None, posts_per_account: int | None = None, process_limit: int = 500) -> dict[str, int]:
-        fetched = self.fetch_posts(account_limit, posts_per_account)
-        processed = self.process_pending(process_limit)
+    def sync(self, account_limit: int | None = None, posts_per_account: int | None = None, process_limit: int = 500, pilot: bool = False) -> dict[str, int]:
+        fetched = self.fetch_posts(account_limit, posts_per_account, pilot)
+        processed = self.process_pending(process_limit, pilot)
         return {**fetched, **processed}

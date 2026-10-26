@@ -146,7 +146,7 @@ class Database:
         with self.connection() as conn:
             rows = [dict(r) for r in conn.execute("SELECT * FROM organizations ORDER BY official_name")]
             return [r for r in rows if name_filter is None or name_filter(r["official_name"])][:limit]
-    def instagram_accounts(self, limit: int | None = None) -> list[dict[str, Any]]:
+    def instagram_accounts(self, limit: int | None = None, name_filter: Any = None) -> list[dict[str, Any]]:
         with self.connection() as conn:
             sql = """SELECT sa.organization_id, o.official_name, sa.handle, sa.url
                      FROM social_accounts sa JOIN organizations o ON o.id=sa.organization_id
@@ -155,11 +155,10 @@ class Database:
                                      WHERE i.organization_id=sa.organization_id AND i.account_url=sa.url
                                      AND i.status='profile_missing')
                      ORDER BY o.official_name"""
-            params: tuple[Any, ...] = ()
-            if limit is not None:
-                sql += " LIMIT ?"
-                params = (limit,)
-            return [dict(r) for r in conn.execute(sql, params)]
+            accounts = [dict(r) for r in conn.execute(sql)]
+            if name_filter is not None:
+                accounts = [account for account in accounts if name_filter(account["official_name"])]
+            return accounts[:limit] if limit is not None else accounts
 
     def record_instagram_issue(self, organization_id: str, account_url: str, handle: str, issue_type: str, detail: str) -> None:
         stamp = now()
@@ -243,12 +242,14 @@ class Database:
                 result.append(item)
             return result
 
-    def pending_posts(self, limit: int = 50) -> list[dict[str, Any]]:
+    def pending_posts(self, limit: int = 50, name_filter: Any = None) -> list[dict[str, Any]]:
         with self.connection() as conn:
-            return [dict(r) for r in conn.execute(
-                "SELECT p.*, o.official_name FROM social_posts p JOIN organizations o ON o.id=p.organization_id WHERE p.extraction_status IN ('pending','failed') ORDER BY p.fetched_at LIMIT ?",
-                (limit,),
+            posts = [dict(r) for r in conn.execute(
+                "SELECT p.*, o.official_name FROM social_posts p JOIN organizations o ON o.id=p.organization_id WHERE p.extraction_status IN ('pending','failed') ORDER BY p.fetched_at"
             )]
+            if name_filter is not None:
+                posts = [post for post in posts if name_filter(post["official_name"])]
+            return posts[:limit]
 
     def stats(self) -> dict[str, int]:
         with self.connection() as conn:

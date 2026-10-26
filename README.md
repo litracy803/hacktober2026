@@ -29,29 +29,16 @@ Open <http://127.0.0.1:8000>. The default database is `data/tritonradar.db`.
 
 ## Instagram and Gemma setup
 
-Google AI Studio is the default provider. Install the SDK and put your AI Studio key in `.env`:
-
-```bash
-pip install google-genai
-```
+TritonRadar sends both organization text and post images to the configured Gemma model through an OpenAI-compatible endpoint. For a local Ollama server, configure:
 
 ```dotenv
-GEMMA_PROVIDER=google
-GEMINI_API_KEY=your_google_ai_studio_key
-GEMMA_MODEL=gemma-4-26b-a4b-it
-```
-
-The project also supports an OpenAI-compatible local endpoint such as Ollama:
-
-```dotenv
-GEMMA_PROVIDER=ollama
 GEMMA_BASE_URL=http://127.0.0.1:11434/v1
 GEMMA_API_KEY=ollama
 GEMMA_MODEL=gemma4:e4b
 BRIGHTDATA_API_KEY=your-brightdata-key
 ```
 
-If the selected provider is not configured, crawling still works and stores deterministic data plus a keyword-based fallback marked `pending_enrichment`.
+Use a vision-capable Gemma model so event extraction can inspect flyer images. If `GEMMA_BASE_URL` is not configured, directory crawling still works and organization enrichment uses the keyword fallback; Instagram event extraction remains pending until Gemma is configured.
 The ingestion flow reads Instagram handles already stored in the database, asks Bright Data's Instagram Posts Discover by URL dataset for recent posts, then sends each post's caption and image to Gemma. Bright Data and Gemma credentials stay server-side in environment variables; never put them in browser JavaScript. Image retention and API use should follow the relevant provider terms.
 
 If a profile fetch fails, TritonRadar records it in `instagram_account_issues` and continues to the next profile. Explicit “profile not found” errors are skipped in future syncs; ambiguous or temporary failures remain retryable. Review issues with `tritonradar instagram-issues`. To retry a skipped profile, call `POST /api/instagram/issues/{id}/retry`; it will be attempted during the next sync.
@@ -63,10 +50,11 @@ The `--pilot` flag selects a stable 10-club cohort covering data science, comput
 ```bash
 tritonradar crawl --limit 50 --enrich
 tritonradar enrich --limit 50
-tritontrail socials --limit 100
+tritonradar socials --limit 100
 tritonradar instagram --accounts 10 --posts-per-account 10
+tritonradar instagram --pilot --posts-per-account 5
 tritonradar instagram --fetch-only
-tritonradar process-instagram --limit 50
+tritonradar process-instagram --pilot --limit 50
 tritonradar instagram-issues
 tritonradar search "computer science career"
 tritonradar stats
@@ -74,7 +62,7 @@ tritonradar stats
 The `socials` command revisits each organization’s UCSD profile, follows up to three explicitly linked official websites, and extracts public Instagram, Facebook, TikTok, YouTube, LinkedIn, Discord, and Linktree URLs. It never logs into or crawls those social platforms. The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/stats`, and `POST /api/crawl`. The included UI provides search, source links, feature confidence, social-link verification state, and evidence snippets.
 
 The default view shows three consecutive days. Use the arrows to move by three days and **Today** to jump to the current date. Event cards show start and end times and include an **Add to calendar** `.ics` download; the event description in the file contains the event tags, organization, location, and Instagram permalink when available. Filter groups now include event formats, practical/social interests, major and interests, and location in that order.
-The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/instagram/issues`, `POST /api/instagram/issues/{id}/retry`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. The service UI includes organization search and Instagram-derived events with tag filters and source-post links.
+The API exposes `GET /api/organizations`, `GET /api/organizations/{id}`, `GET /api/events?tag=career`, `GET /api/instagram/issues`, `POST /api/instagram/issues/{id}/retry`, `GET /api/stats`, `POST /api/crawl`, and `POST /api/instagram/sync`. Add `pilot=true` to crawl and Instagram sync requests to restrict work to the curated 10-club cohort. The CLI's `--pilot` flag applies the same cohort to crawling, social discovery, Instagram post retrieval, and Gemma extraction. The service UI includes organization search and Instagram-derived events with tag filters and source-post links.
 
 ## Event extraction and review
 
