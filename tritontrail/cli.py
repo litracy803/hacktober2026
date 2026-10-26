@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 
 from .config import settings
 from .crawler import Crawler
@@ -15,10 +16,13 @@ def main() -> None:
     crawl = sub.add_parser("crawl", help="Crawl the UCSD directory")
     crawl.add_argument("--limit", type=int)
     crawl.add_argument("--enrich", action="store_true")
+    crawl.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
     enrich = sub.add_parser("enrich", help="Enrich pending organizations with Gemma")
     enrich.add_argument("--limit", type=int, default=50)
+    enrich.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
     socials = sub.add_parser("socials", help="Discover social links from official club websites")
     socials.add_argument("--limit", type=int, default=100)
+    socials.add_argument("--pilot", action="store_true", help="Use the curated 10-club pilot cohort")
     search = sub.add_parser("search", help="Search indexed organizations")
     search.add_argument("query", nargs="?", default="")
     search.add_argument("--tag")
@@ -34,12 +38,16 @@ def main() -> None:
     issues.add_argument("--limit", type=int, default=200)
     args = parser.parse_args()
     db = Database(settings.db_path)
+    def progress(current: int, total: int, label: str) -> None:
+        percent = int((current / total) * 100) if total else 100
+        print(f"[{current}/{total} {percent:3d}%] {label}", file=sys.stderr, flush=True)
+
     if args.command == "crawl":
-        result = Crawler(settings, db).crawl(args.limit, args.enrich)
+        result = Crawler(settings, db).crawl(args.limit, args.enrich, progress, args.pilot)
     elif args.command == "enrich":
-        result = Crawler(settings, db).enrich_pending(args.limit)
+        result = Crawler(settings, db).enrich_pending(args.limit, progress, args.pilot)
     elif args.command == "socials":
-        result = Crawler(settings, db).discover_socials(args.limit)
+        result = Crawler(settings, db).discover_socials(args.limit, progress, args.pilot)
     elif args.command == "search":
         result = db.search(args.query, args.tag)
     elif args.command == "instagram":

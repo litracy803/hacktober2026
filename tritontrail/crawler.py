@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from urllib.parse import urljoin
+from collections.abc import Callable
 
 import httpx
 
@@ -9,6 +10,7 @@ from .config import Settings
 from .db import Database
 from .extraction import GENERIC_SOCIAL_HANDLES, parse_directory, parse_page
 from .gemma import GemmaClient, input_hash
+from .pilot import matches_pilot
 
 
 class Crawler:
@@ -34,13 +36,16 @@ class Crawler:
         assert last_error is not None
         raise last_error
 
-    def crawl(self, limit: int | None = None, enrich: bool = False) -> dict[str, int]:
+    def crawl(self, limit: int | None = None, enrich: bool = False, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False) -> dict[str, int]:
         directory_html = self.fetch(self.settings.directory_url)
         organizations = parse_directory(directory_html, self.settings.directory_url)
+        if pilot:
+            organizations = [org for org in organizations if matches_pilot(org["official_name"])]
         if limit:
             organizations = organizations[:limit]
         counts = {"discovered": len(organizations), "processed": 0, "enriched": 0, "failed": 0}
-        for org in organizations:
+        total = len(organizations)
+        for index, org in enumerate(organizations, 1):
             try:
                 detail_html = self.fetch(org["directory_url"])
                 page = parse_page(detail_html, org["directory_url"])
@@ -58,6 +63,8 @@ class Crawler:
                 counts["processed"] += 1
             except Exception:
                 counts["failed"] += 1
+            if progress:
+                progress(index, total, org["official_name"])
             time.sleep(self.settings.crawl_delay_seconds)
         return counts
 
@@ -96,10 +103,12 @@ class Crawler:
                 continue
             time.sleep(self.settings.crawl_delay_seconds)
 
-    def enrich_pending(self, limit: int = 50) -> dict[str, int]:
+    def enrich_pending(self, limit: int = 50, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False) -> dict[str, int]:
         done = 0
         failed = 0
-        for org in self.db.pending_enrichment(limit):
+        organizations = self.db.pending_enrichment(limit, matches_pilot if pilot else None)
+        total = len(organizations)
+        for index, org in enumerate(organizations, 1):
             try:
                 html = self.fetch(org["directory_url"])
                 page = parse_page(html, org["directory_url"])
@@ -109,12 +118,16 @@ class Crawler:
                 done += 1
             except Exception:
                 failed += 1
+            if progress:
+                progress(index, total, org["official_name"])
         return {"enriched": done, "failed": failed}
 
-    def discover_socials(self, limit: int = 100) -> dict[str, int]:
+    def discover_socials(self, limit: int = 100, progress: Callable[[int, int, str], None] | None = None, pilot: bool = False) -> dict[str, int]:
         processed = 0
         discovered = 0
-        for org in self.db.organizations(limit):
+        organizations = self.db.organizations(limit, matches_pilot if pilot else None)
+        total = len(organizations)
+        for index, org in enumerate(organizations, 1):
             try:
                 html = self.fetch(org["directory_url"])
                 page = parse_page(html, org["directory_url"])
@@ -127,5 +140,9 @@ class Crawler:
                 discovered += max(0, len(after.get("social_accounts", [])) - old_count)
                 processed += 1
             except Exception:
+                if progress:
+                    progress(index, total, org["official_name"])
                 continue
+            if progress:
+                progress(index, total, org["official_name"])
         return {"processed": processed, "new_social_accounts": discovered}
